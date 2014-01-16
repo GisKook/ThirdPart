@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ThirdPart", "ThirdPart\ThirdPart.vcproj", "{1E26D991-591C-41B7-878C-6004B751D60A}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vc8libcurl", "..\curl-7.34.0\vs\vc8\lib\vc8libcurl.vcproj", "{87EE9DA4-DE1E-4448-8324-183C98DCA588}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1E26D991-591C-41B7-878C-6004B751D60A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{1E26D991-591C-41B7-878C-6004B751D60A}.Debug|Win32.Build.0 = Debug|Win32
+		{1E26D991-591C-41B7-878C-6004B751D60A}.Release|Win32.ActiveCfg = Release|Win32
+		{1E26D991-591C-41B7-878C-6004B751D60A}.Release|Win32.Build.0 = Release|Win32
+		{87EE9DA4-DE1E-4448-8324-183C98DCA588}.Debug|Win32.ActiveCfg = Debug|Win32
+		{87EE9DA4-DE1E-4448-8324-183C98DCA588}.Debug|Win32.Build.0 = Debug|Win32
+		{87EE9DA4-DE1E-4448-8324-183C98DCA588}.Release|Win32.ActiveCfg = Release|Win32
+		{87EE9DA4-DE1E-4448-8324-183C98DCA588}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

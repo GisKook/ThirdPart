@@ -5,6 +5,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ThirdPart", "ThirdPart\Thir
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vc8libcurl", "..\curl-7.34.0\vs\vc8\lib\vc8libcurl.vcproj", "{87EE9DA4-DE1E-4448-8324-183C98DCA588}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libpq", "..\libpq\libpq.vcproj", "{6D59ABBC-2F53-4262-8AF6-92485C6377EA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -19,6 +21,10 @@ Global
 		{87EE9DA4-DE1E-4448-8324-183C98DCA588}.Debug|Win32.Build.0 = Debug|Win32
 		{87EE9DA4-DE1E-4448-8324-183C98DCA588}.Release|Win32.ActiveCfg = Release|Win32
 		{87EE9DA4-DE1E-4448-8324-183C98DCA588}.Release|Win32.Build.0 = Release|Win32
+		{6D59ABBC-2F53-4262-8AF6-92485C6377EA}.Debug|Win32.ActiveCfg = Debug|Win32
+		{6D59ABBC-2F53-4262-8AF6-92485C6377EA}.Debug|Win32.Build.0 = Debug|Win32
+		{6D59ABBC-2F53-4262-8AF6-92485C6377EA}.Release|Win32.ActiveCfg = Release|Win32
+		{6D59ABBC-2F53-4262-8AF6-92485C6377EA}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

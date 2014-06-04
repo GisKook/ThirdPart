@@ -99,6 +99,8 @@ int OraDatabase::Destroy() {
 	assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO); 
 	swRetval = OCIHandleFree(m_pStmt,OCI_HTYPE_STMT);
 	assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO); 
+	swRetval = OCIHandleFree(m_pEnv,OCI_HTYPE_ENV);
+	assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO); 
 
 	return 0;
 }

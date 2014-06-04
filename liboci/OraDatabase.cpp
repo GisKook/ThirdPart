@@ -116,16 +116,16 @@ int OraDatabase::DisConnect() {
 
 bool OraDatabase::ExecSQL( const char* strSql )
 {
-	if(!checkerr(m_pErr, OCIStmtPrepare(m_pStmt,
+	if(OCI_SUCCESS != checkerr(m_pErr, OCIStmtPrepare(m_pStmt,
 		m_pErr, (OraText*)strSql, (ub4) strlen((char *)strSql),
 		(ub4) OCI_NTV_SYNTAX, (ub4) OCI_DEFAULT)))
 		return FALSE;
 
-	if(!checkerr(m_pErr, OCIStmtExecute(m_pSvcCtx,m_pStmt, m_pErr,
+	if(OCI_SUCCESS != checkerr(m_pErr, OCIStmtExecute(m_pSvcCtx,m_pStmt, m_pErr,
 		(ub4)1,(ub4)0, (OCISnapshot *) NULL, 
 		(OCISnapshot *) NULL, (ub4)OCI_DEFAULT)))
 		return FALSE;
-	if(!checkerr(m_pErr, OCITransCommit(m_pSvcCtx,
+	if(OCI_SUCCESS != checkerr(m_pErr, OCITransCommit(m_pSvcCtx,
 		m_pErr,
 		OCI_DEFAULT)))
 		return FALSE;

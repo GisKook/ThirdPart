@@ -9,6 +9,12 @@
 #define ORADATABASE_H_H
 #include <vector>
 
+#if defined(_WIN32)
+#define ENGINE_API __declspec(dllexport)
+#else
+#define ENGINE_API
+#endif // _DEBUG
+
 typedef struct OCIEnv           OCIEnv;            /* OCI environment handle */
 typedef struct OCIError         OCIError;                /* OCI error handle */
 typedef struct OCISvcCtx        OCISvcCtx;             /* OCI service handle */
@@ -29,7 +35,7 @@ typedef enum{
 	ORATEXT,
 }OraDatatype;
 
-class CNVARIANT{
+class ENGINE_API CNVARIANT{
 public:
 	CNVARIANT();
 	CNVARIANT(OraDatatype datatype){
@@ -55,7 +61,7 @@ typedef struct{
 	char* passwd; 
 }OraConnInfo;
 
-class OraDatabase{
+class ENGINE_API OraDatabase{
 public:
 	OraDatabase();
 public:
@@ -80,23 +86,17 @@ public:
 	// remark 只返回一个元组
 	int Query(const char* strSQL, CNVARIANT& val);
 
+	// brief 得到的select 语句的结果
+	// param[in] sql语句
+	// param[in/out] 绑定的数据 传入指定数据类型，得到的值
 	int Query(const char* strSQL, std::vector<CNVARIANT>& vVal);
-	int Query(const char* strSQL, std::vector<CNVARIANT>& vVal, int nRow);
 
-	// brief 执行Select操作 异步操作
-	// param[in] sql 要被执行的sql
-	bool SendQuery(const char* strQuery);
+	// brief 得到下一条数据
+	int Fetch();
 
-	// brief 收集由SendQuery发送的命令的结果
-	void* GetRecordset();
-
-	// brief 开启事务
-	void BeginTransaction();
-
-	// brief 结束事务
-	void Commit();
-public:
-	OCIEnv* GetEnv(){return m_pEnv;};
+	// brief 得到select列表中的列个数
+	int GetColCount();
+	//int Query(const char* strSQL, std::vector<CNVARIANT>& vVal, int nRow);
 private:
 	OCIEnv* m_pEnv; 
 	OCIError* m_pErr;

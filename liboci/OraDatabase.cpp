@@ -66,7 +66,6 @@ int OraDatabase::Init() {
 	swRetval = OCIHandleAlloc(m_pEnv,(void**)&m_pTrans, OCI_HTYPE_TRANS, 0, NULL); assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO);
 	swRetval = OCIHandleAlloc(m_pEnv,(void**)&m_pStmt, OCI_HTYPE_STMT, 0, NULL); assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO);
 
-
 	return 0; 
 }
 
@@ -165,14 +164,17 @@ int OraDatabase::Query( const char* strSQL, CNVARIANT &value){
 	default:
 		break;
 	}
-	if(OCI_SUCCESS != checkerr(m_pErr,OCIStmtExecute(m_pSvcCtx, m_pStmt,
+	sword swRetval=checkerr(m_pErr,OCIStmtExecute(m_pSvcCtx, m_pStmt,
 		m_pErr, (ub4)1, (ub4)0,
 		(OCISnapshot *) NULL, (OCISnapshot *) NULL,
-		(ub4)OCI_DEFAULT)))
+		(ub4)OCI_DEFAULT));
+
+	if(OCI_NO_DATA == swRetval)
+		return CN_NODATA;
+	else if(OCI_SUCCESS != swRetval)
 		return CN_FAIL;
 
-	return CN_FAIL;
-
+	return CN_SUCCESS; 
 }
 
 int OraDatabase::Query( const char* strSQL, std::vector<CNVARIANT>& vVal ) {
@@ -217,7 +219,7 @@ int OraDatabase::Query( const char* strSQL, std::vector<CNVARIANT>& vVal ) {
 	}
 
 	sword swRetval=checkerr(m_pErr,OCIStmtExecute(m_pSvcCtx, m_pStmt, m_pErr, 
-		(ub4)1, (ub4)0, (OCISnapshot *) NULL, (OCISnapshot *) NULL, (ub4)OCI_DEFAULT));
+		(ub4)0, (ub4)0, (OCISnapshot *) NULL, (OCISnapshot *) NULL, (ub4)OCI_DEFAULT));
 	if(OCI_NO_DATA == swRetval)
 		return CN_NODATA;
 	else if(OCI_SUCCESS != swRetval)
@@ -226,7 +228,28 @@ int OraDatabase::Query( const char* strSQL, std::vector<CNVARIANT>& vVal ) {
 	return CN_SUCCESS;
 }
 
-int OraDatabase::Query( const char* strSQL, std::vector<CNVARIANT>& vVal, int nRow ) {
+int OraDatabase::Fetch() {
+	sword swRetval=OCIStmtFetch2(m_pStmt, m_pErr, (ub4) 1, (ub2) OCI_FETCH_NEXT,
+		(sb4) 0, OCI_DEFAULT);
+	if (swRetval == OCI_NO_DATA) { 
+		return CN_NODATA;
+	}else if (swRetval == OCI_NEED_DATA) {
+		return CN_NEEDMORE;
+	}else if(swRetval != OCI_SUCCESS){
+		return CN_FAIL;
+	}
+
+	return CN_SUCCESS;
+}
+
+int OraDatabase::GetColCount() {
+	ub4 paramcnt;
+	OCIAttrGet((dvoid*)m_pStmt, (ub4)OCI_HTYPE_STMT,(dvoid*)&paramcnt,  (ub4)0, (ub4)OCI_ATTR_PARAM_COUNT, m_pErr);
+
+	return paramcnt;
+}
+
+/*int OraDatabase::Query( const char* strSQL, std::vector<CNVARIANT>& vVal, int nRow ) {
 	OCIDefine *defnp = (OCIDefine *) NULL;
 	//OCIDefine *defnp1 = (OCIDefine *) NULL;
 	//OCIDefine *defnp2 = (OCIDefine *) NULL;
@@ -299,3 +322,4 @@ int OraDatabase::Query( const char* strSQL, std::vector<CNVARIANT>& vVal, int nR
 
 
 
+*/

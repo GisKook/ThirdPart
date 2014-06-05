@@ -30,6 +30,10 @@ int main(){
 		printf("get data from db :%s,  %d,  %f\n", vVal[0].pValue, vVal[1].iValue, vVal[2].fValue);
 		retval = db.Fetch();
 	}
+
+
+
+	
 	db.DisConnect();
 	db.Destroy();
 	return 0;

@@ -46,15 +46,10 @@ int main(){
 		printf("get data from db :%s,  %d,  %f\n", vVal[0].pValue, vVal[1].iValue, vVal[2].fValue);
 		retval = db.Fetch();
 	}
-<<<<<<< HEAD
 	if (!db.IsConnectionValid()) { printf("not connect\n");
 	}else{printf("connect\n");}
-=======
-
-
 
 	
->>>>>>> 851feb67df4a24306adb52f36fb651c2db940248
 	db.DisConnect();
 	if (!db.IsConnectionValid()) { printf("not connect\n");
 	}else{printf("connect\n");}

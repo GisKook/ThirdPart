@@ -59,7 +59,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="oci.lib"
-				OutputFile="$(OutDir)\liboci.exe"
+				OutputFile="$(OutDir)\liboci.dll"
 				AdditionalLibraryDirectories="./lib"
 				GenerateDebugInformation="true"
 				TargetMachine="1"

@@ -19,7 +19,7 @@
 			Name="Debug|Win32"
 			OutputDirectory="./lib"
 			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="1"
+			ConfigurationType="2"
 			CharacterSet="2"
 			>
 			<Tool
@@ -59,7 +59,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="oci.lib"
-				OutputFile="$(OutDir)\liboci.dll"
+				OutputFile="$(OutDir)\liboci.exe"
 				AdditionalLibraryDirectories="./lib"
 				GenerateDebugInformation="true"
 				TargetMachine="1"

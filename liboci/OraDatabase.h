@@ -55,7 +55,7 @@ public:
 
 typedef struct{
 	char* host;
-	char* port;
+	int port;
 	char* dbName;
 	char* login;
 	char* passwd; 
@@ -92,10 +92,26 @@ public:
 	int Query(const char* strSQL, std::vector<CNVARIANT>& vVal);
 
 	// brief 得到下一条数据
+	// param[in] 调用Fetch前要先Query
 	int Fetch();
 
 	// brief 得到select列表中的列个数
-	int GetColCount();
+	int GetColCount(); 
+
+	// brief 判断连接是否可用
+	// remark 该函数仅对部分连接不可用的情况进行了判断：
+	// this attribute is sensitive to high availability evnets on the database
+	// that result in dead connection from the client(e.g. a database instance 
+	// going down) and to some of specific errors(such as ORA-3113) that are 
+	// known to drop connections
+	// 对于dba杀掉服务进程或者网络连接失败是没有方法进行判断的，(如果想知道的话
+	// 就只能等执行下一个oci函数时返回的错误知道了:( )
+	bool IsConnectionValid();
+
+	// brief 得到链接字符串
+	OraConnInfo* GetConnInfo(){return &m_ConnInfo;};
+
+
 	//int Query(const char* strSQL, std::vector<CNVARIANT>& vVal, int nRow);
 private:
 	OCIEnv* m_pEnv; 
@@ -106,5 +122,7 @@ private:
 	OCITrans* m_pTrans;
 	OCIStmt* m_pStmt;
 	
+private:
+	OraConnInfo m_ConnInfo;
 };
 #endif

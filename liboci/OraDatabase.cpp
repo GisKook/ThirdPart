@@ -52,6 +52,7 @@ m_pSession(NULL),
 m_pTrans(NULL),
 m_pStmt(NULL)
 {
+	memset(&m_ConnInfo, 0, sizeof(m_ConnInfo));
 }
 
 int OraDatabase::Init() {
@@ -66,11 +67,15 @@ int OraDatabase::Init() {
 	swRetval = OCIHandleAlloc(m_pEnv,(void**)&m_pTrans, OCI_HTYPE_TRANS, 0, NULL); assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO);
 	swRetval = OCIHandleAlloc(m_pEnv,(void**)&m_pStmt, OCI_HTYPE_STMT, 0, NULL); assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO);
 
-	return 0; 
+	return CN_SUCCESS; 
 }
 
+char g_fmt[128]="(DESCRIPTION = (ADDRESS_LIST = (ADDRESS = (PROTOCOL = TCP)(HOST = %s)(PORT = %d))) (CONNECT_DATA = (SERVICE_NAME = %s)))";
 int OraDatabase::Connect( const OraConnInfo& dbConnInfo ) {
-	checkerr(m_pErr, OCIServerAttach(m_pServer, m_pErr, (const OraText*)dbConnInfo.dbName, strlen(dbConnInfo.dbName), OCI_DEFAULT));
+	char conn[256]={0};
+	sprintf_s(conn,g_fmt,dbConnInfo.host, dbConnInfo.port, dbConnInfo.dbName);
+	
+	checkerr(m_pErr, OCIServerAttach(m_pServer, m_pErr, (const OraText*)conn, strlen(conn), OCI_DEFAULT));
 	//	swRetval = OCILogon(m_pEnv, m_pErr, &m_pSvcCtx, (const text*)dbConnInfo.login,(ub4)strlen(dbConnInfo.login),
 	//		(const text*)dbConnInfo.passwd, (ub4)strlen(dbConnInfo.passwd),(const text*)dbConnInfo.dbName, (ub4)strlen(dbConnInfo.dbName));
 	//	assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO);
@@ -82,10 +87,15 @@ int OraDatabase::Connect( const OraConnInfo& dbConnInfo ) {
 	swRetval = OCISessionBegin(m_pSvcCtx, m_pErr, m_pSession, OCI_CRED_RDBMS,OCI_DEFAULT);
 	assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO); 
 
-	return 0;
+	memcpy(&m_ConnInfo, &dbConnInfo, sizeof(m_ConnInfo));
+
+	return CN_SUCCESS;
 }
 
 int OraDatabase::Destroy() { 
+
+	memset(&m_ConnInfo, 0, sizeof(m_ConnInfo));
+
 	sword swRetval = OCIHandleFree(m_pErr,OCI_HTYPE_ERROR);
 	assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO); 
 	swRetval = OCIHandleFree(m_pSvcCtx,OCI_HTYPE_SVCCTX);
@@ -101,7 +111,7 @@ int OraDatabase::Destroy() {
 	swRetval = OCIHandleFree(m_pEnv,OCI_HTYPE_ENV);
 	assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO); 
 
-	return 0;
+	return CN_SUCCESS;
 }
 
 int OraDatabase::DisConnect() {
@@ -110,7 +120,7 @@ int OraDatabase::DisConnect() {
 	swRetval = OCIServerDetach(m_pServer, m_pErr, OCI_DEFAULT);
 	assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO); 
 
-	return 0; 
+	return CN_SUCCESS; 
 }
 
 bool OraDatabase::ExecSQL( const char* strSql )
@@ -246,7 +256,23 @@ int OraDatabase::GetColCount() {
 	ub4 paramcnt;
 	OCIAttrGet((dvoid*)m_pStmt, (ub4)OCI_HTYPE_STMT,(dvoid*)&paramcnt,  (ub4)0, (ub4)OCI_ATTR_PARAM_COUNT, m_pErr);
 
+
+	OCIAttrGet((dvoid*)m_pStmt, (ub4)OCI_HTYPE_STMT,(dvoid*)&paramcnt,  (ub4)0, (ub4)OCI_ATTR_LIST_COLUMNS, m_pErr);
+
 	return paramcnt;
+}
+
+bool OraDatabase::IsConnectionValid() {
+	ub4 ServerStatus = 0;
+	OCIServer* srv = (OCIServer*)NULL;
+	checkerr(m_pErr, OCIAttrGet(m_pSvcCtx, OCI_HTYPE_SVCCTX, &srv, 
+		0,OCI_ATTR_SERVER, m_pErr));
+	checkerr(m_pErr, OCIAttrGet(srv, OCI_HTYPE_SERVER,&ServerStatus, (ub4*)NULL, OCI_ATTR_SERVER_STATUS, m_pErr));
+	if (ServerStatus == OCI_SERVER_NOT_CONNECTED) {
+		return false;
+	}
+
+	return true; 
 }
 
 /*int OraDatabase::Query( const char* strSQL, std::vector<CNVARIANT>& vVal, int nRow ) {

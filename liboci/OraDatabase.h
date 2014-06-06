@@ -5,6 +5,7 @@
  * author: a staff of CETCNAV
  * date: 2014Äê5ÔÂ26ÈÕ
  */
+
 #ifndef ORADATABASE_H_H
 #define ORADATABASE_H_H
 #include <vector>

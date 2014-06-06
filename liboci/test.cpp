@@ -31,6 +31,9 @@ int main(){
 	db.ExecSQL("INSERT INTO TEST_TABLE22 VALUES('zhangkaiaaa', 1, 4.4)");
 	db.ExecSQL("INSERT INTO TEST_TABLE22 VALUES('zhangkai',2,33.3 )");
 	db.ExecSQL("INSERT INTO TEST_TABLE22 VALUES('zhangkaidddd',3,35.5)");
+	db.ExecSQL("BEGIN INSERT_TABLE22('zhangkaiss', 4,3.22); END;");
+	db.ExecSQL("BEGIN INSERT_TABLE22('zhangkaiss', 4,3.22); END;");
+	db.ExecSQL("BEGIN INSERT_TABLE22('zhangkaiss', 4,3.22); END;");
 	
 	vector<CNVARIANT> vVal; 
 	vVal.push_back(CNVARIANT(ORATEXT));

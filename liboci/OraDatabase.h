@@ -8,13 +8,8 @@
 
 #ifndef ORADATABASE_H_H
 #define ORADATABASE_H_H
-#include <vector>
-
-#if defined(_WIN32)
-#define ENGINE_API __declspec(dllexport)
-#else
-#define ENGINE_API
-#endif // _DEBUG
+#include <vector> 
+#include "DatabaseDef.h"
 
 typedef struct OCIEnv           OCIEnv;            /* OCI environment handle */
 typedef struct OCIError         OCIError;                /* OCI error handle */
@@ -53,14 +48,6 @@ public:
 #define fValue value.fValue
 #define pValue value.pValue
 };
-
-typedef struct{
-	char* host;
-	int port;
-	char* dbName;
-	char* login;
-	char* passwd; 
-}OraConnInfo;
 
 class ENGINE_API OraDatabase{
 public:

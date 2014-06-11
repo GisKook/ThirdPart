@@ -10,15 +10,15 @@ int main(){
 	DatabasePool dbpool;
 	dbpool.Create(connInfo, 10);
 	OraDatabase *pOraDb;
-	for ( int i = 0; i < 100; i++) {
+	for ( int i = 1; i <200 ; i++) {
 		pOraDb = dbpool.GetConnection(i);
 	}
-	for ( int i = 0; i < 100; i++) {
+	for ( int i = 1; i < 200; i++) {
 		dbpool.PutbackConnection(i);
 	}
-	for ( int i = 0; i < 100; i++) {
-		dbpool.DeleteConnection(i);
-	}
+ 	for ( int i = 1; i < 200; i++) {
+ 		dbpool.DeleteConnection(i);
+ 	}
 	
 	return 0;
 }

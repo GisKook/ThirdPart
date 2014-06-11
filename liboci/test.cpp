@@ -9,11 +9,11 @@ int main(){
 	conn.dbName="";
 	
 
-	conn.host="192.168.1.166";
+	conn.host="192.168.1.231";
 	conn.port=1521;
-	conn.dbName="test";
-	conn.login="zhangkai";
-	conn.passwd="zhangkai";
+	conn.dbName="ORCL";
+	conn.login="dkpps2";
+	conn.passwd="dkpps";
 	OraDatabase db;
 	db.Init();
 	if (!db.IsConnectionValid()) { printf("not connect\n");

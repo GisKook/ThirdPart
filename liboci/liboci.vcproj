@@ -19,7 +19,7 @@
 			Name="Debug|Win32"
 			OutputDirectory="./lib"
 			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="1"
+			ConfigurationType="2"
 			CharacterSet="2"
 			>
 			<Tool
@@ -213,6 +213,10 @@
 			</File>
 			<File
 				RelativePath=".\DatabasePool.h"
+				>
+			</File>
+			<File
+				RelativePath=".\list.h"
 				>
 			</File>
 			<File

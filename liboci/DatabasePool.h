@@ -13,7 +13,7 @@
 
 typedef struct {
 	OraDatabase *db;
-	list_head *list;
+	list_head list;
 	bool isUsed;
 	int nThreadID;
 }dbConn;

@@ -58,7 +58,7 @@ m_pStmt(NULL)
 int OraDatabase::Init() {
 	sword swRetval = OCIEnvCreate(&m_pEnv, OCI_DEFAULT, NULL,NULL, NULL,NULL, 0, NULL);
 	assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO);
-	if (swRetval!=OCI_SUCCESS_WITH_INFO || swRetval != OCI_SUCCESS) {
+	if (!(swRetval==OCI_SUCCESS_WITH_INFO || swRetval == OCI_SUCCESS)) {
 		return CN_FAIL;
 	}
 	swRetval = OCIHandleAlloc(m_pEnv,(void**)&m_pErr, OCI_HTYPE_ERROR, 0, NULL); assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO);
@@ -79,23 +79,23 @@ int OraDatabase::Connect( const OraConnInfo& dbConnInfo ) {
 	sprintf_s(conn,g_fmt,dbConnInfo.host, dbConnInfo.port, dbConnInfo.dbName);
 	
 	sword swRetval = checkerr(m_pErr, OCIServerAttach(m_pServer, m_pErr, (const OraText*)conn, strlen(conn), OCI_DEFAULT));
-	if (swRetval!=OCI_SUCCESS_WITH_INFO || swRetval != OCI_SUCCESS) {
+	if (!(swRetval==OCI_SUCCESS_WITH_INFO || swRetval == OCI_SUCCESS)) {
 		return CN_FAIL;
 	}
 
 	swRetval = checkerr(m_pErr, OCIAttrSet(m_pSession, OCI_HTYPE_SESSION, (void*)dbConnInfo.login, (ub4)strlen(dbConnInfo.login), OCI_ATTR_USERNAME, m_pErr));
-	if (swRetval!=OCI_SUCCESS_WITH_INFO || swRetval != OCI_SUCCESS) {
+	if (!(swRetval==OCI_SUCCESS_WITH_INFO || swRetval == OCI_SUCCESS)) {
 		return CN_FAIL;
 	}
 	
 	swRetval=OCIAttrSet(m_pSession, OCI_HTYPE_SESSION, (void*)dbConnInfo.passwd, (ub4)strlen(dbConnInfo.passwd), OCI_ATTR_PASSWORD, m_pErr);
 	assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO);
-	if (swRetval!=OCI_SUCCESS_WITH_INFO || swRetval != OCI_SUCCESS) {
+	if (!(swRetval==OCI_SUCCESS_WITH_INFO || swRetval == OCI_SUCCESS)) {
 		return CN_FAIL;
 	}
 
 	swRetval = OCISessionBegin(m_pSvcCtx, m_pErr, m_pSession, OCI_CRED_RDBMS,OCI_DEFAULT);
-	if (swRetval!=OCI_SUCCESS_WITH_INFO || swRetval != OCI_SUCCESS) {
+	if (!(swRetval==OCI_SUCCESS_WITH_INFO || swRetval == OCI_SUCCESS)) {
 		return CN_FAIL;
 	}
 	assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO); 

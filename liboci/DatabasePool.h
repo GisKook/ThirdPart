@@ -15,10 +15,10 @@ typedef struct {
 	OraDatabase *db;
 	list_head list;
 	bool isUsed;
-	int nThreadID;
+	long ID;
 }dbConn;
 
-class DatabasePool{
+class ENGINE_API DatabasePool{
 public:
 	DatabasePool();
 
@@ -32,13 +32,13 @@ public:
 	
 	// brief 得到数据库连接
 	// param[in] 线程id号
-	OraDatabase* GetConnection(int nThreadID);
+	dbConn* GetConnection(int nThreadID);
 
 	// brief 将数据库连接放回池子
-	void PutbackConnection(int nThreadID);
+	void PutbackConnection(int nThreadID, dbConn* conn);
 
 	// brief 删除
-	void DeleteConnection(int nThreadID);
+	void DeleteConnection(int nThreadID, dbConn* conn);
 
 	// brief 得到连接信息
 	OraConnInfo* GetConnInfo();
@@ -54,4 +54,5 @@ private:
 
 	list_head* m_pHashTable;
 };
+
 #endif

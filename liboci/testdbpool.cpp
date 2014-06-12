@@ -9,15 +9,15 @@ int main(){
 	connInfo.passwd = "zhangkai";
 	DatabasePool dbpool;
 	dbpool.Create(connInfo, 10);
-	OraDatabase *pOraDb;
+	dbConn *pOraDb;
 	for ( int i = 1; i <200 ; i++) {
 		pOraDb = dbpool.GetConnection(i);
 	}
 	for ( int i = 1; i < 200; i++) {
-		dbpool.PutbackConnection(i);
+		dbpool.PutbackConnection(i,pOraDb);
 	}
  	for ( int i = 1; i < 200; i++) {
- 		dbpool.DeleteConnection(i);
+ 		dbpool.DeleteConnection(i, pOraDb);
  	}
 	
 	return 0;

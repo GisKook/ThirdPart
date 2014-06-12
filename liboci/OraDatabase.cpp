@@ -3,7 +3,11 @@
 #include <string.h>
 #include <stdio.h>
 #include "OraDatabase.h"
+#include "stdio.h"
 using namespace std;
+
+#define CNPRINTF  printf
+
 
 int checkerr(OCIError *errhp,sword status )
 {
@@ -17,24 +21,24 @@ int checkerr(OCIError *errhp,sword status )
 	case OCI_NO_DATA:
 		break;
 	case OCI_SUCCESS_WITH_INFO:
-		printf("Error - OCI_SUCCESS_WITH_INFO\n");
+		CNPRINTF("Error - OCI_SUCCESS_WITH_INFO\n");
 		break;
 	case OCI_NEED_DATA:
-		printf("Error - OCI_NEED_DATA\n");
+		CNPRINTF("Error - OCI_NEED_DATA\n");
 		break;
 	case OCI_ERROR:
 		OCIErrorGet((dvoid *)errhp, (ub4) 1, (text *) NULL, &errcode,
 			errbuf, (ub4) sizeof(errbuf), OCI_HTYPE_ERROR);
-		printf("Error - %.*s\n", 512, errbuf);
+		CNPRINTF("Error - %.*s\n", 512, errbuf);
 		break;
 	case OCI_STILL_EXECUTING:
-		printf("Error - OCI_STILL_EXECUTE\n");
+		CNPRINTF("Error - OCI_STILL_EXECUTE\n");
 		break;
 	case OCI_INVALID_HANDLE:
-		printf("Error - OCI_INVALID_HANDLE\n");
+		CNPRINTF("Error - OCI_INVALID_HANDLE\n");
 		break;
 	case OCI_CONTINUE:
-		printf("Error - OCI_CONTINUE\n");
+		CNPRINTF("Error - OCI_CONTINUE\n");
 		break;
 	default:
 		break;
@@ -56,7 +60,7 @@ m_pStmt(NULL)
 }
 
 int OraDatabase::Init() {
-	sword swRetval = OCIEnvCreate(&m_pEnv, OCI_DEFAULT, NULL,NULL, NULL,NULL, 0, NULL);
+	sword swRetval = OCIEnvCreate(&m_pEnv, OCI_THREADED, NULL,NULL, NULL,NULL, 0, NULL);
 	assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO);
 	if (!(swRetval==OCI_SUCCESS_WITH_INFO || swRetval == OCI_SUCCESS)) {
 		return CN_FAIL;
@@ -70,6 +74,7 @@ int OraDatabase::Init() {
 	swRetval = OCIHandleAlloc(m_pEnv,(void**)&m_pTrans, OCI_HTYPE_TRANS, 0, NULL); assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO);
 	swRetval = OCIHandleAlloc(m_pEnv,(void**)&m_pStmt, OCI_HTYPE_STMT, 0, NULL); assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO);
 
+	//CNPRINTF(".");
 	return CN_SUCCESS; 
 }
 
@@ -88,13 +93,13 @@ int OraDatabase::Connect( const OraConnInfo& dbConnInfo ) {
 		return CN_FAIL;
 	}
 	
-	swRetval=OCIAttrSet(m_pSession, OCI_HTYPE_SESSION, (void*)dbConnInfo.passwd, (ub4)strlen(dbConnInfo.passwd), OCI_ATTR_PASSWORD, m_pErr);
+	swRetval=checkerr(m_pErr, OCIAttrSet(m_pSession, OCI_HTYPE_SESSION, (void*)dbConnInfo.passwd, (ub4)strlen(dbConnInfo.passwd), OCI_ATTR_PASSWORD, m_pErr));
 	assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO);
 	if (!(swRetval==OCI_SUCCESS_WITH_INFO || swRetval == OCI_SUCCESS)) {
 		return CN_FAIL;
 	}
 
-	swRetval = OCISessionBegin(m_pSvcCtx, m_pErr, m_pSession, OCI_CRED_RDBMS,OCI_DEFAULT);
+	swRetval = checkerr(m_pErr, OCISessionBegin(m_pSvcCtx, m_pErr, m_pSession, OCI_CRED_RDBMS,OCI_DEFAULT));
 	if (!(swRetval==OCI_SUCCESS_WITH_INFO || swRetval == OCI_SUCCESS)) {
 		return CN_FAIL;
 	}
@@ -202,8 +207,6 @@ int OraDatabase::Query( const char* strSQL, CNVARIANT &value){
 
 int OraDatabase::Query( const char* strSQL, std::vector<CNVARIANT>& vVal ) {
 	OCIDefine *defnp = (OCIDefine *) NULL;
-	//OCIDefine *defnp1 = (OCIDefine *) NULL;
-	//OCIDefine *defnp2 = (OCIDefine *) NULL;
 	if(OCI_SUCCESS != checkerr(m_pErr, OCIStmtPrepare(m_pStmt,
 		m_pErr, (OraText*)strSQL, (ub4) strlen(strSQL), 
 		(ub4) OCI_NTV_SYNTAX, (ub4) OCI_DEFAULT)))

@@ -57,7 +57,6 @@ dbConn* DatabasePool::GetConnection( int nThreadID ) {
 	int nHashkey = GetHashCode(nThreadID); 
 	dbConn *pConn = NULL;
 	if (list_empty(&m_pHashTable[nHashkey])) {
-		printf("|");
 		pConn = new dbConn;
 		pConn->db = new OraDatabase;
 		pConn->db->Init();
@@ -79,12 +78,10 @@ dbConn* DatabasePool::GetConnection( int nThreadID ) {
 		list_for_each_safe(pos, n, &m_pHashTable[nHashkey]){ 
 			pConn = list_entry(pos, dbConn, list);
 			if (!pConn->isUsed){
-				printf("-");
 				pConn->isUsed = true;
-				if(pConn->db->IsConnectionValid()){ 
+				if(pConn->db->IsConnectionValid() ){ 
 					return pConn;
 				} else{
-					printf("e");
 					DeleteConnection(nThreadID, pConn);
 				}
 			}
@@ -93,7 +90,6 @@ dbConn* DatabasePool::GetConnection( int nThreadID ) {
 		pConn = new dbConn;
 		pConn->db = new OraDatabase;
 		pConn->db->Init();
-		printf("+");
 		if (CN_SUCCESS != pConn->db->Connect(m_ConnInfo)) {
 			pConn->db->Destroy();
 			delete pConn->db;

@@ -12,10 +12,10 @@ m_pHashTable(NULL)
 }
 
 void DatabasePool::Create( OraConnInfo& connInfo, int size ) {
-	m_ConnInfo.dbName = strdup(connInfo.dbName);
-	m_ConnInfo.host = strdup(connInfo.host);
-	m_ConnInfo.login = strdup(connInfo.login);
-	m_ConnInfo.passwd = strdup(connInfo.passwd);
+	m_ConnInfo.dbName = _strdup(connInfo.dbName);
+	m_ConnInfo.host = _strdup(connInfo.host);
+	m_ConnInfo.login = _strdup(connInfo.login);
+	m_ConnInfo.passwd = _strdup(connInfo.passwd);
 	m_ConnInfo.port = connInfo.port;
 	m_nPoolsize = size;
 	m_pHashTable = new list_head[size]; 

@@ -1,3 +1,4 @@
+//#include <afx.h>
 #include "oci.h" // 头文件位置有关系
 #include <assert.h>
 #include <string.h>
@@ -6,12 +7,12 @@
 #include "stdio.h"
 using namespace std;
 
-#define CNPRINTF  printf
-
+//#define CNPRINTF TRACE0 
+#define CNPRINTF printf
 
 int checkerr(OCIError *errhp,sword status )
 {
-	text errbuf[512];
+	text errbuf[512]={0};
 	sb4 errcode = 0;
 
 	switch (status)
@@ -29,7 +30,8 @@ int checkerr(OCIError *errhp,sword status )
 	case OCI_ERROR:
 		OCIErrorGet((dvoid *)errhp, (ub4) 1, (text *) NULL, &errcode,
 			errbuf, (ub4) sizeof(errbuf), OCI_HTYPE_ERROR);
-		CNPRINTF("Error - %.*s\n", 512, errbuf);
+		CNPRINTF((char*)errbuf);
+		//CNPRINTF("Error - %.*s\n", 512, errbuf);
 		break;
 	case OCI_STILL_EXECUTING:
 		CNPRINTF("Error - OCI_STILL_EXECUTE\n");
@@ -205,34 +207,36 @@ int OraDatabase::Query( const char* strSQL, CNVARIANT &value){
 	return CN_SUCCESS; 
 }
 
-int OraDatabase::Query( const char* strSQL, std::vector<CNVARIANT>& vVal ) {
+int OraDatabase::Query( const char* strSQL, CNVARIANT* p, int nCount){
+	if (p==NULL) {
+		return CN_FAIL;
+	}
 	OCIDefine *defnp = (OCIDefine *) NULL;
 	if(OCI_SUCCESS != checkerr(m_pErr, OCIStmtPrepare(m_pStmt,
 		m_pErr, (OraText*)strSQL, (ub4) strlen(strSQL), 
 		(ub4) OCI_NTV_SYNTAX, (ub4) OCI_DEFAULT)))
 		return CN_FAIL;
-	vector<CNVARIANT>::iterator it = vVal.begin();
-	int j=0;
-	for (;it!=vVal.end();it++) {
+	int i=0,j=0;
+	for (;i<nCount;i++) {
 		j++;
-		switch(it->eDataType)
+		switch(p[i].eDataType)
 		{
 		case ORAINT:
 			if(OCI_SUCCESS != checkerr(m_pErr,OCIDefineByPos(m_pStmt, &defnp, m_pErr,
-				j,(dvoid*) &it->iValue, sizeof(int), 
+				j,(dvoid*) &p[i].iValue, sizeof(int), 
 				(ub2)SQLT_INT, (dvoid*) 0, (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT)))
 				return CN_FAIL;
 			break;
 		case ORAFLOAT:
 			if(OCI_SUCCESS != checkerr(m_pErr,OCIDefineByPos(m_pStmt, &defnp, m_pErr,
-				j,(dvoid*) &it->fValue, sizeof(float), 
+				j,(dvoid*) &p[i].fValue, sizeof(float), 
 				(ub2)SQLT_FLT, (dvoid*) 0, (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT)))
 				return CN_FAIL;
 			break; 
 
 		case ORATEXT:
 			if(OCI_SUCCESS != checkerr(m_pErr,OCIDefineByPos(m_pStmt, &defnp, m_pErr,
-				j,(dvoid*) it->pValue, 255, 
+				j,(dvoid*) &p[i].pValue, 255, 
 				(ub2)SQLT_STR, (dvoid*) 0, (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT)))
 				return CN_FAIL;
 			break;

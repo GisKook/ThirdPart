@@ -33,7 +33,7 @@ typedef enum{
 
 class ENGINE_API CNVARIANT{
 public:
-	CNVARIANT();
+	CNVARIANT(){};
 	CNVARIANT(OraDatatype datatype){
 		eDataType=datatype;
 	}
@@ -77,7 +77,7 @@ public:
 	// brief 得到的select 语句的结果
 	// param[in] sql语句
 	// param[in/out] 绑定的数据 传入指定数据类型，得到的值
-	int Query(const char* strSQL, std::vector<CNVARIANT>& vVal);
+	int Query(const char* strSQL, CNVARIANT* p, int nCount);
 
 	// brief 得到下一条数据
 	// param[in] 调用Fetch前要先Query

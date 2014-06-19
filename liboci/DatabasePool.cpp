@@ -33,7 +33,7 @@ void DatabasePool::Destroy() {
 			list_for_each_safe(pos,n, &m_pHashTable[i])
 			{ 
 				pConn = list_entry(pos, dbConn, list);
-				assert(pConn->isUsed == false);
+				assert(pConn->isUsed == 0);
 				pConn->db->DisConnect();
 				pConn->db->Destroy();
 				delete pConn->db;
@@ -68,7 +68,7 @@ dbConn* DatabasePool::GetConnection( int nThreadID ) {
 			pConn = NULL;
 			return NULL;
 		}
-		pConn->isUsed=true;
+		pConn->isUsed=1;
 		pConn->ID=InterlockedExchangeAdd(&uID, 1);
 		list_add_tail(&pConn->list, &m_pHashTable[nHashkey]);
 		return pConn;
@@ -77,8 +77,7 @@ dbConn* DatabasePool::GetConnection( int nThreadID ) {
 		list_head *n;
 		list_for_each_safe(pos, n, &m_pHashTable[nHashkey]){ 
 			pConn = list_entry(pos, dbConn, list);
-			if (!pConn->isUsed){
-				pConn->isUsed = true;
+			if (0==InterlockedCompareExchange(&pConn->isUsed,1,0)){
 				if(pConn->db->IsConnectionValid() ){ 
 					return pConn;
 				} else{
@@ -97,7 +96,7 @@ dbConn* DatabasePool::GetConnection( int nThreadID ) {
 			pConn = NULL;
 			return NULL;
 		}
-		pConn->isUsed=true;
+		pConn->isUsed=1;
 		pConn->ID=InterlockedExchangeAdd(&uID, 1);
 
 		list_add_tail(&pConn->list, &m_pHashTable[nHashkey]);
@@ -111,13 +110,12 @@ void DatabasePool::PutbackConnection(int nThreadID, dbConn* conn) {
 	int nHashkey=GetHashCode(nThreadID); 
 	assert(!list_empty(&m_pHashTable[nHashkey]));
 	dbConn *pConn = NULL;
-	dbConn *pConn2=NULL;
 	list_head *pos, *n;
 	list_for_each_safe(pos, n, &m_pHashTable[nHashkey]){
 		pConn = list_entry(pos, dbConn, list);
 		if (pConn->ID == conn->ID) { 
-			assert(pConn->isUsed == true);
-			pConn->isUsed=false;
+			assert(pConn->isUsed == 1);
+			pConn->isUsed=0;
 			return;
 		}
 	}

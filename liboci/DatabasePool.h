@@ -14,7 +14,7 @@
 typedef struct {
 	OraDatabase *db;
 	list_head list;
-	bool isUsed;
+	volatile long isUsed; // 0 for no 1 for used
 	long ID;
 }dbConn;
 

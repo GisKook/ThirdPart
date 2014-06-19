@@ -10,7 +10,7 @@ using namespace std;
 //#define CNPRINTF TRACE0 
 #define CNPRINTF printf
 
-int checkerr(OCIError *errhp,sword status )
+int checkerr(OCIError *errhp,sword status,const char* strSQL = "" )
 {
 	text errbuf[512]={0};
 	sb4 errcode = 0;
@@ -23,26 +23,40 @@ int checkerr(OCIError *errhp,sword status )
 		break;
 	case OCI_SUCCESS_WITH_INFO:
 		CNPRINTF("Error - OCI_SUCCESS_WITH_INFO\n");
+		CNPRINTF(strSQL);
+		CNPRINTF("\r\n");
 		break;
 	case OCI_NEED_DATA:
 		CNPRINTF("Error - OCI_NEED_DATA\n");
+		CNPRINTF(strSQL);
+		CNPRINTF("\r\n");
 		break;
 	case OCI_ERROR:
 		OCIErrorGet((dvoid *)errhp, (ub4) 1, (text *) NULL, &errcode,
 			errbuf, (ub4) sizeof(errbuf), OCI_HTYPE_ERROR);
 		CNPRINTF((char*)errbuf);
+		CNPRINTF(strSQL);
+		CNPRINTF("\r\n");
 		//CNPRINTF("Error - %.*s\n", 512, errbuf);
 		break;
 	case OCI_STILL_EXECUTING:
 		CNPRINTF("Error - OCI_STILL_EXECUTE\n");
+		CNPRINTF(strSQL);
+		CNPRINTF("\r\n");
 		break;
 	case OCI_INVALID_HANDLE:
 		CNPRINTF("Error - OCI_INVALID_HANDLE\n");
+		CNPRINTF(strSQL);
+		CNPRINTF("\r\n");
 		break;
 	case OCI_CONTINUE:
 		CNPRINTF("Error - OCI_CONTINUE\n");
+		CNPRINTF(strSQL);
+		CNPRINTF("\r\n");
 		break;
 	default:
+		CNPRINTF(strSQL);
+		CNPRINTF("\r\n");
 		break;
 	}
 	return status;
@@ -147,16 +161,16 @@ bool OraDatabase::ExecSQL( const char* strSql )
 {
 	if(OCI_SUCCESS != checkerr(m_pErr, OCIStmtPrepare(m_pStmt,
 		m_pErr, (OraText*)strSql, (ub4) strlen((char *)strSql),
-		(ub4) OCI_NTV_SYNTAX, (ub4) OCI_DEFAULT)))
+		(ub4) OCI_NTV_SYNTAX, (ub4) OCI_DEFAULT),strSql))
 		return FALSE;
 
 	if(OCI_SUCCESS != checkerr(m_pErr, OCIStmtExecute(m_pSvcCtx,m_pStmt, m_pErr,
 		(ub4)1,(ub4)0, (OCISnapshot *) NULL, 
-		(OCISnapshot *) NULL, (ub4)OCI_DEFAULT)))
+		(OCISnapshot *) NULL, (ub4)OCI_DEFAULT),strSql))
 		return FALSE;
 	if(OCI_SUCCESS != checkerr(m_pErr, OCITransCommit(m_pSvcCtx,
 		m_pErr,
-		OCI_DEFAULT)))
+		OCI_DEFAULT),strSql))
 		return FALSE;
 
 	return TRUE;
@@ -166,27 +180,27 @@ int OraDatabase::Query( const char* strSQL, CNVARIANT &value){
 	OCIDefine *defnp = (OCIDefine *) NULL;
 	if(OCI_SUCCESS != checkerr(m_pErr, OCIStmtPrepare(m_pStmt,
 		m_pErr, (OraText*)strSQL, (ub4) strlen(strSQL), 
-		(ub4) OCI_NTV_SYNTAX, (ub4) OCI_DEFAULT)))
+		(ub4) OCI_NTV_SYNTAX, (ub4) OCI_DEFAULT),strSQL))
 		return CN_FAIL;
 	switch(value.eDataType)
 	{
 	case ORAINT:
 		if(OCI_SUCCESS != checkerr(m_pErr,OCIDefineByPos(m_pStmt, &defnp, m_pErr,
 			1,(dvoid*) &value.iValue, sizeof(sword), 
-			(ub2)SQLT_INT, (dvoid*) 0, (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT)))
+			(ub2)SQLT_INT, (dvoid*) 0, (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT),strSQL))
 			return CN_FAIL;
 		break;
 	case ORAFLOAT:
 		if(OCI_SUCCESS != checkerr(m_pErr,OCIDefineByPos(m_pStmt, &defnp, m_pErr,
 			1,(dvoid*) &value.fValue, sizeof(float), 
-			(ub2)SQLT_FLT, (dvoid*) 0, (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT)))
+			(ub2)SQLT_FLT, (dvoid*) 0, (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT),strSQL))
 			return CN_FAIL;
 		break; 
 
 	case ORATEXT:
 		if(OCI_SUCCESS != checkerr(m_pErr,OCIDefineByPos(m_pStmt, &defnp, m_pErr,
 			(ub4) 1,(dvoid*) value.pValue, 255, 
-			(ub2)SQLT_STR, (dvoid*) 0, (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT)))
+			(ub2)SQLT_STR, (dvoid*) 0, (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT),strSQL))
 			return CN_FAIL;
 		break;
 	case ORANULL:
@@ -197,7 +211,7 @@ int OraDatabase::Query( const char* strSQL, CNVARIANT &value){
 	sword swRetval=checkerr(m_pErr,OCIStmtExecute(m_pSvcCtx, m_pStmt,
 		m_pErr, (ub4)1, (ub4)0,
 		(OCISnapshot *) NULL, (OCISnapshot *) NULL,
-		(ub4)OCI_DEFAULT));
+		(ub4)OCI_DEFAULT),strSQL);
 
 	if(OCI_NO_DATA == swRetval)
 		return CN_NODATA;
@@ -214,7 +228,7 @@ int OraDatabase::Query( const char* strSQL, CNVARIANT* p, int nCount){
 	OCIDefine *defnp = (OCIDefine *) NULL;
 	if(OCI_SUCCESS != checkerr(m_pErr, OCIStmtPrepare(m_pStmt,
 		m_pErr, (OraText*)strSQL, (ub4) strlen(strSQL), 
-		(ub4) OCI_NTV_SYNTAX, (ub4) OCI_DEFAULT)))
+		(ub4) OCI_NTV_SYNTAX, (ub4) OCI_DEFAULT),strSQL))
 		return CN_FAIL;
 	int i=0,j=0;
 	for (;i<nCount;i++) {
@@ -224,20 +238,20 @@ int OraDatabase::Query( const char* strSQL, CNVARIANT* p, int nCount){
 		case ORAINT:
 			if(OCI_SUCCESS != checkerr(m_pErr,OCIDefineByPos(m_pStmt, &defnp, m_pErr,
 				j,(dvoid*) &p[i].iValue, sizeof(int), 
-				(ub2)SQLT_INT, (dvoid*) 0, (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT)))
+				(ub2)SQLT_INT, (dvoid*) 0, (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT),strSQL))
 				return CN_FAIL;
 			break;
 		case ORAFLOAT:
 			if(OCI_SUCCESS != checkerr(m_pErr,OCIDefineByPos(m_pStmt, &defnp, m_pErr,
 				j,(dvoid*) &p[i].fValue, sizeof(float), 
-				(ub2)SQLT_FLT, (dvoid*) 0, (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT)))
+				(ub2)SQLT_FLT, (dvoid*) 0, (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT),strSQL))
 				return CN_FAIL;
 			break; 
 
 		case ORATEXT:
 			if(OCI_SUCCESS != checkerr(m_pErr,OCIDefineByPos(m_pStmt, &defnp, m_pErr,
 				j,(dvoid*) &p[i].pValue, 255, 
-				(ub2)SQLT_STR, (dvoid*) 0, (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT)))
+				(ub2)SQLT_STR, (dvoid*) 0, (ub2 *) 0, (ub2 *) 0, OCI_DEFAULT),strSQL))
 				return CN_FAIL;
 			break;
 		case ORANULL:
@@ -249,7 +263,7 @@ int OraDatabase::Query( const char* strSQL, CNVARIANT* p, int nCount){
 	}
 
 	sword swRetval=checkerr(m_pErr,OCIStmtExecute(m_pSvcCtx, m_pStmt, m_pErr, 
-		(ub4)0, (ub4)0, (OCISnapshot *) NULL, (OCISnapshot *) NULL, (ub4)OCI_DEFAULT));
+		(ub4)0, (ub4)0, (OCISnapshot *) NULL, (OCISnapshot *) NULL, (ub4)OCI_DEFAULT),strSQL);
 	if(OCI_NO_DATA == swRetval)
 		return CN_NODATA;
 	else if(OCI_SUCCESS != swRetval)

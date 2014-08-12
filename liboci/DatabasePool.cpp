@@ -107,6 +107,9 @@ dbConn* DatabasePool::GetConnection( int nThreadID ) {
 }
 
 void DatabasePool::PutbackConnection(int nThreadID, dbConn* conn) {
+	if (conn == NULL) {
+		return;
+	}
 	int nHashkey=GetHashCode(nThreadID); 
 	assert(!list_empty(&m_pHashTable[nHashkey]));
 	dbConn *pConn = NULL;

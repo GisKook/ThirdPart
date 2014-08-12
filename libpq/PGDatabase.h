@@ -33,16 +33,16 @@ public:
 
 	// brief 执行Select操作 异步操作
 	// param[in] sql 要被执行的sql
-	bool SendQuery(const char* strQuery);
+	//bool SendQuery(const char* strQuery);
 
 	// brief 收集由SendQuery发送的命令的结果
 	PGRecordset* GetRecordset();
 
 	// brief 开启事务
-	void BeginTransaction();
+	bool BeginTransaction();
 
 	// brief 结束事务
-	void Commit();
+	bool Commit();
 private:
 	PGconn* m_pConnect;
 	

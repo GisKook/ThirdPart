@@ -44,10 +44,27 @@ PGRecordset* PGDatabase::GetRecordset() {
 	return pRecord;
 }
 
-void PGDatabase::BeginTransaction() {
-	PQexec(m_pConnect, "begin transaction");
+bool PGDatabase::BeginTransaction() {
+	PGresult* res = PQexec(m_pConnect, "begin transaction");
+	if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+		fprintf(stderr, "BEGIN command failed: %s", PQerrorMessage(m_pConnect));
+		PQclear(res);
+		
+		return false;
+	}
+	PQclear(res);
+	return true;
 }
 
-void PGDatabase::Commit() {
-	PQexec(m_pConnect, "commit"); 
+bool PGDatabase::Commit() {
+	PGresult* res = PQexec(m_pConnect, "commit"); 
+	if(PQresultStatus(res) != PGRES_COMMAND_OK){
+		fprintf(stderr, "END command failed: %s", PQerrorMessage(m_pConnect));
+		PQclear(res);
+
+		return false;
+	}
+	PQclear(res);
+
+	return true;
 }

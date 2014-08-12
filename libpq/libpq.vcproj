@@ -173,6 +173,10 @@
 				RelativePath=".\PGRecordset.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\test.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Í·ÎÄ¼þ"

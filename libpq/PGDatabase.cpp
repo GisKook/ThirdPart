@@ -23,14 +23,14 @@ int PGDatabase::DisConnect() {
 	return 0;
 }
 
-bool PGDatabase::SendQuery( const char* strQuery){ 
-	int retval = PQsendQuery(m_pConnect, strQuery);
-	if (retval == 0) {
-		fprintf(stderr, "Send Query to database failed: %s",
-			PQerrorMessage(m_pConnect));
-	}
-	return retval != 0;
-}
+//bool PGDatabase::SendQuery( const char* strQuery){ 
+//	int retval = PQsendQuery(m_pConnect, strQuery);
+//	if (retval == 0) {
+//		fprintf(stderr, "Send Query to database failed: %s",
+//			PQerrorMessage(m_pConnect));
+//	}
+//	return retval != 0;
+//}
 
 PGRecordset* PGDatabase::GetRecordset() { 
 	PGresult* pResult= PQgetResult(m_pConnect);

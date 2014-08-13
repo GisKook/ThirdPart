@@ -12,8 +12,6 @@
 typedef struct{
 	char* pghost;
 	char* pgport;
-	char* pgoptions;
-	char* pgtty;
 	char* dbName;
 	char* login;
 	char* passwd; 
@@ -36,7 +34,13 @@ public:
 	//bool SendQuery(const char* strQuery);
 
 	// brief 收集由SendQuery发送的命令的结果
-	PGRecordset* GetRecordset();
+	//PGRecordset* GetRecordset();
+
+	// brief 执行阻塞的insert/update操作
+	bool Exec(const char* strSQL);
+
+	// brief 执行阻塞的select 操作
+	PGRecordset* Query(const char* strSQL);
 
 	// brief 开启事务
 	bool BeginTransaction();

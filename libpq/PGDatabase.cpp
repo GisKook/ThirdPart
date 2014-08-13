@@ -1,9 +1,10 @@
 #include "libpq-fe.h"
 #include "PGDatabase.h" 
+#include <assert.h>
 
 int PGDatabase::Connect( const PGConnInfo& dbConnInfo ) {
 	m_pConnect= PQsetdbLogin(dbConnInfo.pghost, dbConnInfo.pgport,
-		dbConnInfo.pgoptions, dbConnInfo.pgtty, dbConnInfo.dbName, 
+		"", "", dbConnInfo.dbName, 
 		dbConnInfo.login, dbConnInfo.passwd);
 	if (PQstatus(m_pConnect) != CONNECTION_OK) {
 		fprintf(stderr, "Connection to database failed: %s",
@@ -32,19 +33,22 @@ int PGDatabase::DisConnect() {
 //	return retval != 0;
 //}
 
-PGRecordset* PGDatabase::GetRecordset() { 
-	PGresult* pResult= PQgetResult(m_pConnect);
-
-	PGRecordset *pRecord = NULL;
-	if (pResult != NULL) {
-		pRecord = new PGRecordset;
-		pRecord->Create(pResult);
-	}
-
-	return pRecord;
-}
+//PGRecordset* PGDatabase::GetRecordset() { 
+//	PGresult* pResult= PQgetResult(m_pConnect);
+//
+//	PGRecordset *pRecord = NULL;
+//	if (pResult != NULL) {
+//		pRecord = new PGRecordset;
+//		pRecord->Create(pResult);
+//	}
+//
+//	return pRecord;
+//}
 
 bool PGDatabase::BeginTransaction() {
+	if (m_pConnect == NULL) {
+		return false;
+	}
 	PGresult* res = PQexec(m_pConnect, "begin transaction");
 	if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 		fprintf(stderr, "BEGIN command failed: %s", PQerrorMessage(m_pConnect));
@@ -57,6 +61,9 @@ bool PGDatabase::BeginTransaction() {
 }
 
 bool PGDatabase::Commit() {
+	if (m_pConnect == NULL) {
+		return false;
+	}
 	PGresult* res = PQexec(m_pConnect, "commit"); 
 	if(PQresultStatus(res) != PGRES_COMMAND_OK){
 		fprintf(stderr, "END command failed: %s", PQerrorMessage(m_pConnect));
@@ -67,4 +74,41 @@ bool PGDatabase::Commit() {
 	PQclear(res);
 
 	return true;
+}
+
+bool PGDatabase::Exec( const char* strSQL ) {
+	if (m_pConnect == NULL) {
+		return false;
+	}
+	assert(m_pConnect != NULL); 
+	PGresult* res = PQexec(m_pConnect, strSQL);
+	if (PQresultStatus(res) != PGRES_COMMAND_OK ) {
+		fprintf(stderr,"%s exec failed!\n", strSQL);
+
+		PQclear(res);
+		return false;
+	} 
+
+	PQclear(res);
+	return true;
+}
+
+PGRecordset* PGDatabase::Query( const char* strSQL ) {
+	if (m_pConnect == NULL) {
+		return NULL;
+	}
+	assert(m_pConnect != NULL);
+	PGresult* res = PQexec(m_pConnect, strSQL);
+
+	if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+		fprintf(stderr,"%s exec failed!\n", strSQL);
+
+		PQclear(res);
+		return NULL;
+	} 
+
+	PGRecordset* pRecordset = new PGRecordset;
+	pRecordset->Create(res);
+
+	return pRecordset;
 }

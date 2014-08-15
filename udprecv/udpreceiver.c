@@ -7,9 +7,11 @@
 #include <stdio.h>
 #include <termios.h>
 #include <string.h>
+#include <errno.h>
 
 
 int main(){
+	printf("dd");
 	int udp_socket = socket(AF_INET, SOCK_DGRAM, 0);
 	if(udp_socket == -1){
 		//	handle_error("socket");
@@ -36,9 +38,16 @@ int main(){
 		fprintf(stderr, "connect error");
 	} 
 
-	if(-1==fcntl(udp_socket,F_SETFD, O_NONBLOCK)){
-		fprintf(stderr, "fcntl error");
-	}
+	int flag = fcntl(udp_socket, F_GETFD, 0);
+	printf("%d", flag);
+
+//	if(-1==fcntl(udp_socket,F_SETFD, flag | O_NONBLOCK)){
+//		fprintf(stderr, "fcntl error");
+//	}
+//	flag = fcntl(STDIN_FILENO, F_GETFD, 0);
+//	if(-1==fcntl(STDIN_FILENO, F_SETFD,flag & !O_NONBLOCK)){
+//		fprintf(stderr, "stdin nonblock error");
+//	}
 
 	int efd = epoll_create1(EPOLL_CLOEXEC);
 	if( efd == -1){
@@ -62,32 +71,46 @@ int main(){
 	struct epoll_event ev1[4];
 	char buf[1024]={0};
 
-//	struct msghdr msg;
-//	msg.msg_name = NULL;
-//	msg.msg_namelen = 0;
-//	struct iovec io;
-//	io.iov_base = buf;
-//	io.iov_len = 1024;
-//	msg.msg_iov = &io;
-//	msg.msg_iovlen = 1;
-//	ssize_t len;
+	//	struct msghdr msg;
+	//	msg.msg_name = NULL;
+	//	msg.msg_namelen = 0;
+	//	struct iovec io;
+	//	io.iov_base = buf;
+	//	io.iov_len = 1024;
+	//	msg.msg_iov = &io;
+	//	msg.msg_iovlen = 1;
+	//	ssize_t len;
+		ssize_t len;
 	for(;;){
 		n = epoll_wait(efd, ev1, 4, -1);
+
 		for(i = 0; i < n; i++){
 			uint32_t flags = ev1[i].events;
 			if(flags&EPOLLIN){
-				printf("epoll IN ");
+				printf("recv ");
 				memset(buf, 0, 1024);
-				read(ev1[i].data.fd,buf,1024);
-				if(ev1[i].data.fd == STDIN_FILENO){ 
-					tcflush(STDIN_FILENO,TCIFLUSH);
+				errno = 0;
+				
+				len = read(ev1[i].data.fd,buf,1024);
+				printf(" %s ", buf);
+				if(errno == EAGAIN){
+					printf("EAGAIN");
 				}
-	//			len = recvmsg(ev1[i].data.fd, &msg, 0);
-	//			if(msg.msg_flags & MSG_TRUNC){
-	//				printf("trunc\n");
+//				while(read(ev1[i].data.fd,buf,1024) > 0){ 
+//					printf("%s -- %d\n",buf, len);
+//					if(errno == EAGAIN){
+//						break;
+//					}
+//				}
+//				if(ev1[i].data.fd == STDIN_FILENO){ 
+//					tcflush(STDIN_FILENO,TCIFLUSH);
+//				}
+	//			sleep(2);
+				//			len = recvmsg(ev1[i].data.fd, &msg, 0);
+				//			if(msg.msg_flags & MSG_TRUNC){
+				//				printf("trunc\n");
 
-	//			}
-				printf("%s\n",buf);
+				//			}
 			}
 
 		}

@@ -2,10 +2,10 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <sys/epoll.h>
+#include <arpa/inet.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <termios.h>
 #include <string.h>
 #include <errno.h>
 
@@ -57,7 +57,7 @@ int udprecv_createepoll(){
 
 void udprecv_add(int efd, int fd){
 	struct epoll_event ev;
-	ev.events = EPOLLIN //| EPOLLET;
+	ev.events = EPOLLIN; //| EPOLLET;
 	ev.data.fd = fd;
 	if (epoll_ctl(efd, EPOLL_CTL_ADD, fd, &ev) == -1) {
 		fprintf(stderr, "add fd error\n");
@@ -102,16 +102,3 @@ void udprecv_epoll(int efd, udprecv_message* msg){
 	}
 }
 
-int main(){
-	int udp_socket = udprecv_createsocket("192.168.1.115", 20000, 20001);
-	int efd = udprecv_servercreate();
-	udprecv_add(efd, udp_socket);
-	udprecv_add(efd, STDIN_FILENO); 
-	udprecv_message msg;
-	memset(&msg, 0, sizeof(msg));
-	for(;;){
-		udprecv_epoll(efd, &msg);
-		sleep(2);
-		printf("zhangkai %s \n", msg.buf);
-	}
-}

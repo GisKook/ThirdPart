@@ -9,20 +9,20 @@
 #include <string.h>
 #include <errno.h>
 
+#define MAXBUFLEN 1024
 
-int main(){
+int udprecv_createsocket(const char* peerip, int peerport, int port){
 	int udp_socket = socket(AF_INET, SOCK_DGRAM, 0);
 	if(udp_socket == -1){
-		//	handle_error("socket");
 		fprintf(stderr, "socket error\n");
+		return -1;
 	}
 	struct sockaddr_in client_addr;
 
 	memset((void*)&client_addr, 0, sizeof(client_addr));
 	client_addr.sin_family = AF_INET;
 	client_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	//client_addr.sin_addr.s_addr = inet_addr("192.168.1.155");
-	client_addr.sin_port = htons(20001);
+	client_addr.sin_port = htons(port);
 	if(bind(udp_socket,(struct sockaddr*)&client_addr, sizeof(struct sockaddr_in)) == -1){
 		fprintf(stderr, "bind error\n");
 	} 
@@ -30,45 +30,50 @@ int main(){
 	struct sockaddr_in server_addr;
 	memset((void*)&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
-	//server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	server_addr.sin_addr.s_addr = inet_addr("192.168.1.115");
-	server_addr.sin_port = htons(20000);
+	server_addr.sin_addr.s_addr = inet_addr(peerip);
+	server_addr.sin_port = htons(peerport);
 	if(connect(udp_socket,(struct sockaddr*)&server_addr, sizeof(struct sockaddr_in)) == -1){
 		fprintf(stderr, "connect error\n");
 	} 
 
-	int flag = 0;
-	flag = fcntl(udp_socket, F_GETFD, 0);
+	return udp_socket;
+}
 
-	if(-1==fcntl(udp_socket,F_SETFD, flag | O_NONBLOCK)){
+void udprecv_setnonblock(int fd){
+	if(-1==fcntl(fd ,F_SETFD, fcntl(fd, F_GETFD, 0) | O_NONBLOCK)){
 		fprintf(stderr, "fcntl error\n");
 	}
-	flag = fcntl(STDIN_FILENO, F_GETFD, 0);
-	if(-1==fcntl(STDIN_FILENO, F_SETFD,flag | O_NONBLOCK)){
-		fprintf(stderr, "stdin nonblock error\n");
-	}
+}
 
+int udprecv_createepoll(){
 	int efd = epoll_create1(EPOLL_CLOEXEC);
+
 	if( efd == -1){
 		fprintf(stderr, "epoll_crate error\n");
 	}
+
+	return efd;
+}
+
+void udprecv_add(int efd, int fd){
 	struct epoll_event ev;
-	ev.events = EPOLLIN | EPOLLET;
-	ev.data.fd = udp_socket;
-	if (epoll_ctl(efd, EPOLL_CTL_ADD, udp_socket, &ev) == -1) {
+	ev.events = EPOLLIN //| EPOLLET;
+	ev.data.fd = fd;
+	if (epoll_ctl(efd, EPOLL_CTL_ADD, fd, &ev) == -1) {
 		fprintf(stderr, "add fd error\n");
 	}
 
-	struct epoll_event evstdin;
-	evstdin.events = EPOLLIN | EPOLLET;
-	evstdin.data.fd = STDIN_FILENO;
-	if (epoll_ctl(efd, EPOLL_CTL_ADD, STDIN_FILENO, &evstdin) == -1) {
-		fprintf(stderr, "add fd error\n");
-	}
+}
 
+typedef struct _udprecv_message{
+	int fd;
+	char buf[MAXBUFLEN];
+}udprecv_message;
+
+void udprecv_epoll(int efd, udprecv_message* msg){
 	int n = 0,i=0;
 	struct epoll_event ev1[4];
-	char buf[10240]={0};
+	char buf[MAXBUFLEN]={0};
 
 	ssize_t len;
 	for(;;){
@@ -83,18 +88,30 @@ int main(){
 				close(ev1[i].data.fd); 
 				continue;
 			}else{
-				printf("recv ");
-				memset(buf, 0, 10240);
+				memset(buf, 0, MAXBUFLEN);
 				errno = 0;
-
-				len = read(ev1[i].data.fd,buf,10240);
-				printf(" %s \n", buf);
+				len = read(ev1[i].data.fd,buf,MAXBUFLEN);
+		//		printf("recv %s\n", buf);
+				memcpy(msg->buf, buf, MAXBUFLEN);
 				if(errno != 0){
 					printf("errno is %d \n", errno);
 				}
+				return;
 			}
-
-
 		}
+	}
+}
+
+int main(){
+	int udp_socket = udprecv_createsocket("192.168.1.115", 20000, 20001);
+	int efd = udprecv_servercreate();
+	udprecv_add(efd, udp_socket);
+	udprecv_add(efd, STDIN_FILENO); 
+	udprecv_message msg;
+	memset(&msg, 0, sizeof(msg));
+	for(;;){
+		udprecv_epoll(efd, &msg);
+		sleep(2);
+		printf("zhangkai %s \n", msg.buf);
 	}
 }

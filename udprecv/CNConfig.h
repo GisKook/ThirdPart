@@ -10,7 +10,7 @@
 
 #include <string>
 #include <map>
-#include "CNDef.h"
+
 #define PEERIP "PeerIP"
 #define PEERPORT "PeerPort"
 #define BINDPORT "BindPort"

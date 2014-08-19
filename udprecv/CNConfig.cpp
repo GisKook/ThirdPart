@@ -42,7 +42,7 @@ bool CNConfig::LoadFile( const char* filename)
 			cJSON_Delete(json);
 			return false;
 		}else{ 
-			m_mapConfig[PEERIP]=string(val->valuestring);
+			m_mapConfig[PEERPORT]=string(val->valuestring);
 		}
 
 		val = cJSON_GetObjectItem(json, BINDPORT);

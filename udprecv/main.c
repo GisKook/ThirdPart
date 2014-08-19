@@ -4,9 +4,10 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <pthread.h>
 #include "udpreceiver.h"
-#include "kfifo.h"
 #include "CNConfig.h"
+#include "dataprocess.h"
 
 #define MAXBUFLEN 1024
 
@@ -22,9 +23,20 @@ int main(){
 	if( udp_socket == -1 ){
 		return -1;
 	}
-	
+
+	int fd[2];
+	if( pipe(fd) == -1){
+		fprintf(stderr, "create pipe fail\n");
+		close(udp_socket);
+		return -1;
+	}
+	dataprocess_init(fd[0]);
+
 	int efd = udprecv_createepoll();
 	if( efd == -1 ){
+		close(udp_socket);
+		close(fd[0]);
+		close(fd[1]);
 		return -1;
 	}
 	udprecv_add(efd, udp_socket);
@@ -50,7 +62,10 @@ int main(){
 				memset(buf, 0, MAXBUFLEN);
 				errno = 0;
 				len = read(ev[i].data.fd,buf,MAXBUFLEN);
-				printf("%s\n", buf);
+				if(ev[i].data.fd == udp_socket){
+					dataprocess_push((unsigned char*)buf, len);
+					write(fd[1], "0", 1);
+				}
 				if(errno != 0){
 					printf("errno is %d \n", errno);
 				}

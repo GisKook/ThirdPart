@@ -1,9 +1,9 @@
 /*
- * brief: libpq.libµÄwrapper,Êı¾İ¿â¼¶±ğµÄ²Ù×÷
+ * brief: libpq.libçš„wrapper,æ•°æ®åº“çº§åˆ«çš„æ“ä½œ
  * function list:
  * 
  * author: a staff of CETCNAV
- * date: 2014Äê5ÔÂ7ÈÕ
+ * date: 2014å¹´5æœˆ7æ—¥
  */
 #ifndef GKDATABASEPG_H_H
 #define GKDATABASEPG_H_H
@@ -22,30 +22,30 @@ typedef struct pg_conn PGconn;
 
 class PGDatabase{
 public:
-	// brief Á¬½ÓÊı¾İ¿â
-	// param[in] Á¬½ÓÄÚÈİ
+	// brief è¿æ¥æ•°æ®åº“
+	// param[in] è¿æ¥å†…å®¹
 	int Connect(const PGConnInfo& dbConnInfo); 
 
-	// ¶Ï¿ªÊı¾İ¿âÁ¬½Ó
+	// æ–­å¼€æ•°æ®åº“è¿æ¥
 	int DisConnect(); 
 
-	// brief Ö´ĞĞSelect²Ù×÷ Òì²½²Ù×÷
-	// param[in] sql Òª±»Ö´ĞĞµÄsql
+	// brief æ‰§è¡ŒSelectæ“ä½œ å¼‚æ­¥æ“ä½œ
+	// param[in] sql è¦è¢«æ‰§è¡Œçš„sql
 	//bool SendQuery(const char* strQuery);
 
-	// brief ÊÕ¼¯ÓÉSendQuery·¢ËÍµÄÃüÁîµÄ½á¹û
+	// brief æ”¶é›†ç”±SendQueryå‘é€çš„å‘½ä»¤çš„ç»“æœ
 	//PGRecordset* GetRecordset();
 
-	// brief Ö´ĞĞ×èÈûµÄinsert/update²Ù×÷
+	// brief æ‰§è¡Œé˜»å¡çš„insert/updateæ“ä½œ
 	bool Exec(const char* strSQL);
 
-	// brief Ö´ĞĞ×èÈûµÄselect ²Ù×÷
+	// brief æ‰§è¡Œé˜»å¡çš„select æ“ä½œ
 	PGRecordset* Query(const char* strSQL);
 
-	// brief ¿ªÆôÊÂÎñ
+	// brief å¼€å¯äº‹åŠ¡
 	bool BeginTransaction();
 
-	// brief ½áÊøÊÂÎñ
+	// brief ç»“æŸäº‹åŠ¡
 	bool Commit();
 private:
 	PGconn* m_pConnect;

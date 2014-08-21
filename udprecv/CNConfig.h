@@ -1,9 +1,9 @@
 /*
- * brief: ¶ÁÈ¡ÅäÖÃÎÄ¼ş ÅäÖÃÎÄ¼şÊ¹ÓÃjson¸ñÊ½
+ * brief: è¯»å–é…ç½®æ–‡ä»¶ é…ç½®æ–‡ä»¶ä½¿ç”¨jsonæ ¼å¼
  * function list:
  * 
  * author: a staff of CETCNAV
- * date: 2014Äê8ÔÂ5ÈÕ
+ * date: 2014å¹´8æœˆ5æ—¥
  */
 #ifndef CNCONFIG_H_H
 #define CNCONFIG_H_H

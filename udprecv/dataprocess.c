@@ -30,7 +30,6 @@ void* parsemsg(void* rd){
 		list_for_each_safe(pos, n,head){
 			printf("%s\n",((struct packet*)container_of(pos, struct packet, list))->data);
 		}
-			
 	}
 
 	pthread_exit(0);

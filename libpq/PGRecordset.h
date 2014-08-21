@@ -1,9 +1,9 @@
 /*
- * brief: ²éÑ¯·µ»ØµÄ½á¹û
+ * brief: æŸ¥è¯¢è¿”å›žçš„ç»“æžœ
  * function list:
  * 
  * author: a staff of CETCNAV
- * date: 2014Äê5ÔÂ7ÈÕ
+ * date: 2014å¹´5æœˆ7æ—¥
  */
 #ifndef GKRECORDSET_H_H
 #define GKRECORDSET_H_H
@@ -15,19 +15,19 @@ typedef struct pg_result PGresult;
 
 class PGRecordset{
 public:
-	// brief ´´½¨
+	// brief åˆ›å»º
 	void Create(PGresult* pResult);
 
-	// brief Çå³ýRecordset
+	// brief æ¸…é™¤Recordset
 	void Destroy();
 
-	// brief µÃµ½ÊôÐÔ¸öÊý
+	// brief å¾—åˆ°å±žæ€§ä¸ªæ•°
 	int GetFieldCount();
 
-	// brief µÃµ½Ôª×éµÄ¸öÊý
+	// brief å¾—åˆ°å…ƒç»„çš„ä¸ªæ•°
 	int GetTupleCount(); 
 
-	// brief µÃµ½Ö¸¶¨µÄÖµ
+	// brief å¾—åˆ°æŒ‡å®šçš„å€¼
 	char* GetValue(int nTuple, int nField); 
 private:
 	PGresult* m_pRecordset; 

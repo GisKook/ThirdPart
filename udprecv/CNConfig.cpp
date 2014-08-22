@@ -6,6 +6,18 @@
 
 using namespace std;
 
+bool CNConfig::setconfig(cJSON* json, const char* configkey, const char* errormsg){
+	cJSON* val = cJSON_GetObjectItem(json, configkey);
+	if(!val||val->type!=cJSON_String||!val->valuestring) {
+		fprintf(stderr,errormsg);
+		cJSON_Delete(json);
+		return false;
+	}else{ 
+		m_mapConfig[configkey]=string(val->valuestring);
+	}
+	return true;
+}
+
 CNConfig& CNConfig::GetInstance()
 {
 	static CNConfig config;
@@ -26,32 +38,18 @@ bool CNConfig::LoadFile( const char* filename)
 		fprintf(stderr,"Error before: [%s]\n",cJSON_GetErrorPtr());
 	}else{ 
 		int nCount = cJSON_GetArraySize(json);
-		assert(nCount==3);
-		cJSON* val = cJSON_GetObjectItem(json, PEERIP);
-		if(!val||val->type!=cJSON_String||!val->valuestring) {
-			fprintf(stderr,"please check config file: ListenIP is not set!\n");
-			cJSON_Delete(json);
-			return false;
-		}else{ 
-			m_mapConfig[PEERIP]=string(val->valuestring);
-		}
+		assert(nCount==7);
+		if( !setconfig(json, PEERIP, "please check config file: ListenIP is not set!\n")||
+	//		!setconfig(json, PEERPORT, "please check config file: ListenPort is not set!\n")||
+			!setconfig(json, BINDPORT, "please check config file: BindPort is not set!\n")||
+			!setconfig(json, DBHOST, "please check config file: dbHost is not set!\n")||
+			!setconfig(json, DBPORT, "please check config file: dbPort is not set!\n")||
+			!setconfig(json, DBNAME, "please check config file: dbName is not set!\n")||
+			!setconfig(json, DBUSER, "please check config file: dbUser is not set!\n")||
+			!setconfig(json, DBPWD, "please check config file: dbPassword is not set!\n")){
 
-		val = cJSON_GetObjectItem(json, PEERPORT);
-		if(!val||val->type!=cJSON_String||!val->valuestring) {
-			fprintf(stderr,"please check config file: ListenPort is not set!\n");
-			cJSON_Delete(json);
-			return false;
-		}else{ 
-			m_mapConfig[PEERPORT]=string(val->valuestring);
-		}
+		return false;
 
-		val = cJSON_GetObjectItem(json, BINDPORT);
-		if(!val||val->type!=cJSON_String||!val->valuestring) {
-			fprintf(stderr,"please check config file: BindPort is not set!\n");
-			cJSON_Delete(json);
-			return false;
-		}else{ 
-			m_mapConfig[BINDPORT]=string(val->valuestring);
 		}
 
 	}

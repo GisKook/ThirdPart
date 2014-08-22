@@ -11,9 +11,16 @@
 #include <string>
 #include <map>
 
+struct cJSON;
+
 #define PEERIP "PeerIP"
 #define PEERPORT "PeerPort"
 #define BINDPORT "BindPort"
+#define DBHOST "dbHost"
+#define DBPORT "dbPort"
+#define DBNAME "dbName"
+#define DBUSER "dbUser"
+#define DBPWD "dbPassword"
 
 class CNConfig{
 public:
@@ -22,6 +29,9 @@ public:
 	bool LoadFile(const char*);
 
 	const char* GetValue(const char*);
+
+private:
+	bool setconfig(cJSON* json, const char* configkey, const char* errormsg);
 
 private:
 	CNConfig(){};

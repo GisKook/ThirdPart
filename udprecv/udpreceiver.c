@@ -31,7 +31,7 @@ int udprecv_createsocket(const char* peerip, int peerport, int port){
 	memset((void*)&server_addr, 0, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_addr.s_addr = inet_addr(peerip);
-	server_addr.sin_port = htons(peerport);
+	server_addr.sin_port = htonl(INADDR_ANY);//htons(peerport);
 	if(connect(udp_socket,(struct sockaddr*)&server_addr, sizeof(struct sockaddr_in)) == -1){
 		fprintf(stderr, "connect error\n");
 	} 

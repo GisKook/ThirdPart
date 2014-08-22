@@ -9,6 +9,7 @@
 #include "PGRecordset.h"
 #include "PGDatabase.h"
 #include "CNConfig.h"
+#include "CNDef.h"
 #include "toolkit.h"
 
 struct list_head* head = NULL;
@@ -35,14 +36,16 @@ void* savemsg(void* rd){
 	char sqlbuf[256];
 	char bytebuf[256];
 	int len_format = 0;
+	int index = 0;
 	for(;;){ 
 		memset(sqlbuf,0,256);
 		len = read(fd, buf, MAXBUFLEN);
 		list_for_each_safe(pos, n, head){ 
 			if(list_entry(pos,struct packet, list)->saved != 1){
-				memset(bytebuf,0,256);
+				memset(bytebuf,0,256); 
+				index = ISBIGENDIAN?(*(int*)(list_entry(pos, struct packet, list)->data + 2)):swab32((*(int*)(list_entry(pos, struct packet, list)->data + 2)));
 				hex2char(bytebuf, list_entry(pos,struct packet, list)->data, list_entry(pos, struct packet, list)->len);
-				sprintf(sqlbuf, "insert into testbytea VALUES(1, E\'\\\\x%s')",bytebuf);
+				sprintf(sqlbuf, "insert into beidoudata(TIME,INDEX,DATA) VALUES(timestamp,%d,E\'\\\\x%s')",index,bytebuf);
 				if(!p->db.Exec(sqlbuf)){
 					fprintf(stderr, "%s insert error! \n",buf);
 				}else{

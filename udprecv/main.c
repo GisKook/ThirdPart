@@ -48,6 +48,7 @@ int main(){
 
 	ssize_t len;
 	for(;;){
+
 		n = epoll_wait(efd, ev, 4, -1);
 
 		for(i = 0; i < n; i++){
@@ -62,6 +63,29 @@ int main(){
 				memset(buf, 0, MAXBUFLEN);
 				errno = 0;
 				len = read(ev[i].data.fd,buf,MAXBUFLEN);
+				if(ev[i].data.fd == STDIN_FILENO){
+					if(buf[0] == 'q'&&
+							buf[1] == 'u'&&
+							buf[2] == 'i'&&
+							buf[3] == 't'){
+						fprintf(stdout, "stop receive beidou data.\n");
+						write(fd[1], "E", 1);
+						if( -1 == epoll_ctl(efd, EPOLL_CTL_DEL, udp_socket, NULL)){
+							fprintf(stderr, "del socket from epoll fail.\n");
+						}
+						if( -1 == epoll_ctl(efd, EPOLL_CTL_DEL, STDIN_FILENO, NULL)){
+							fprintf(stderr, "del socket from epoll fail.\n");
+						}
+
+						close(udp_socket);
+						close(fd[0]);
+						close(fd[1]);
+						close(efd);
+						sleep(1);
+						goto exit;
+					}
+					printf("dd\n");
+				}
 				if(ev[i].data.fd == udp_socket){
 					dataprocess_push((unsigned char*)buf, len);
 					write(fd[1], "0", 1);
@@ -72,5 +96,6 @@ int main(){
 			}
 		}
 	}
+exit:
 	return 0;
 }

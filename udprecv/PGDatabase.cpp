@@ -51,7 +51,7 @@ bool PGDatabase::BeginTransaction() {
 	}
 	PGresult* res = PQexec(m_pConnect, "begin transaction");
 	if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-		fprintf(stderr, "BEGIN command failed: %s", PQerrorMessage(m_pConnect));
+		fprintf(stderr, "BEGIN command failed: %s\n", PQerrorMessage(m_pConnect));
 		PQclear(res);
 		
 		return false;
@@ -66,7 +66,7 @@ bool PGDatabase::Commit() {
 	}
 	PGresult* res = PQexec(m_pConnect, "commit"); 
 	if(PQresultStatus(res) != PGRES_COMMAND_OK){
-		fprintf(stderr, "END command failed: %s", PQerrorMessage(m_pConnect));
+		fprintf(stderr, "END command failed: %s\n", PQerrorMessage(m_pConnect));
 		PQclear(res);
 
 		return false;
@@ -83,9 +83,10 @@ bool PGDatabase::Exec( const char* strSQL ) {
 	assert(m_pConnect != NULL); 
 	PGresult* res = PQexec(m_pConnect, strSQL);
 	if (PQresultStatus(res) != PGRES_COMMAND_OK ) {
-		fprintf(stderr,"%s exec failed!\n", strSQL);
-
+		fprintf(stderr,"%s failed!", strSQL);
+		fprintf(stderr, " %s\n", PQerrorMessage(m_pConnect));
 		PQclear(res);
+
 		return false;
 	} 
 

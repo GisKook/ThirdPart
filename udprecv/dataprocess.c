@@ -45,7 +45,7 @@ void* savemsg(void* rd){
 				memset(bytebuf,0,256); 
 				index = ISBIGENDIAN?(*(int*)(list_entry(pos, struct packet, list)->data + 2)):swab32((*(int*)(list_entry(pos, struct packet, list)->data + 2)));
 				hex2char(bytebuf, list_entry(pos,struct packet, list)->data, list_entry(pos, struct packet, list)->len);
-				sprintf(sqlbuf, "insert into beidoudata(TIME,INDEX,DATA) VALUES(timestamp,%d,E\'\\\\x%s')",index,bytebuf);
+				sprintf(sqlbuf, "insert into \"BRS_UDP_DATA\"(\"TIME\",\"INDEX\",\"DATA\") VALUES(now(),%d,E\'\\\\x%s')",index,bytebuf);
 				if(!p->db.Exec(sqlbuf)){
 					fprintf(stderr, "%s insert error! \n",buf);
 				}else{

@@ -75,7 +75,7 @@ void* forwardmsg(void* rd){
 	Beidoumessage beidoumessage;
 	Communication* communication = beidoumessage.mutable_commuincation();
 	Communicationreceipt* communicationreceipt = beidoumessage.mutable_communicationreceipt();
-	Positioninfo* positioninfo = beidoumessage.mutable_postioninfo();
+	Positioninfo* positioninfo = beidoumessage.mutable_positioninfo();
 
 	string str;
 	for(;;){
@@ -94,10 +94,10 @@ void* forwardmsg(void* rd){
 						positioninfo->set_emergencypostion(tempsegment->message.posinfo->emergencypostion);
 						positioninfo->set_multivaluesolution(tempsegment->message.posinfo->multivaluesolution);
 						positioninfo->set_key(tempsegment->message.posinfo->key, 6);
-						positioninfo->set_longtitude_degree(tempsegment->message.posinfo->longitudedegree);
-						positioninfo->set_longtitude_minute(tempsegment->message.posinfo->longitudeminute);
-						positioninfo->set_longtitude_second(tempsegment->message.posinfo->longitudesecond);
-						positioninfo->set_longtitude_tenths(tempsegment->message.posinfo->longitudetenths);
+						positioninfo->set_longitude_degree(tempsegment->message.posinfo->longitudedegree);
+						positioninfo->set_longitude_minute(tempsegment->message.posinfo->longitudeminute);
+						positioninfo->set_longitude_second(tempsegment->message.posinfo->longitudesecond);
+						positioninfo->set_longitude_tenths(tempsegment->message.posinfo->longitudetenths);
 						positioninfo->set_latitude_degree(tempsegment->message.posinfo->latitudedegree);
 						positioninfo->set_latitude_minute(tempsegment->message.posinfo->latitudeminute);
 						positioninfo->set_latitude_second(tempsegment->message.posinfo->latitudesecond);
@@ -122,13 +122,14 @@ void* forwardmsg(void* rd){
 						communicationreceipt->set_receipttime_hour(tempsegment->message.rcptinfo->receipttime.hour);
 						communicationreceipt->set_receipttime_minute(tempsegment->message.rcptinfo->receipttime.minutes);
 						communicationreceipt->set_receipttime_second(tempsegment->message.rcptinfo->receipttime.seconds);
-	//					communicationreceipt->SerializeToString(&str); 
 					}else{
 						fprintf(stderr, "no such protocol %d\n", tempsegment->messagecategory);
 					}
 					beidoumessage.SerializeToString(&str);
-					if(!str.empty()){
-
+					positioninfo->Clear();
+					communication->Clear();
+					communicationreceipt->Clear();
+					if(!str.empty()){ 
 						zmq_msg_t msg;
 						int rc = zmq_msg_init_size(&msg, str.length());
 						assert(rc == 0);
@@ -136,25 +137,31 @@ void* forwardmsg(void* rd){
 
 						rc = zmq_msg_send(&msg, p->zmq_socket, 0);
 						assert(rc != -1); 
+						zmq_msg_close(&msg);
 						temp->forward = 1;
-						if(temp->saved == 1){ 
-							free(temp->data);
-							clearbeidouinfo(&temp->fmtinfo);
-							list_del(&temp->list);
-							free(temp);
-						}
 					}
 
 				}    
 				assert(temp->fmtinfo.retrydataentrycount == 0);
 			}
+			if(temp->saved == 1 && temp->forward == 1){ 
+				if(temp->data != NULL){ 
+					free(temp->data);
+					temp->data = NULL;
+				}
+				clearbeidouinfo(&temp->fmtinfo);
+				list_del(&temp->list);
+				if(temp != NULL){
+					free(temp);
+					temp = NULL;
+				}
+			}
 		}
 		if(buf[0] == 'E'){
 			fprintf(stdout, "    forward beidou data thread exit successfuly.\n");
-			beidoumessage.release_commuincation();
-			beidoumessage.release_communicationreceipt();
-			beidoumessage.release_postioninfo();
+			beidoumessage.Clear();
 			zmq_ctx_destroy(p->zmq_ctx);
+			p->zmq_ctx = NULL;
 			pthread_exit(0);
 		}
 
@@ -219,13 +226,19 @@ void* savemsg(void* rd){
 					continue;
 				}else{
 					temp->saved = 1;
-					if(temp->forward == 1){ 
-						free(temp->data);
-						clearbeidouinfo(&temp->fmtinfo);
-						list_del(&temp->list);
-						free(temp);
-					}
 				}	
+			}
+			if(temp->forward == 1 && temp->saved == 1){ 
+				if(temp->data != NULL){
+					free(temp->data);
+					temp->data = NULL;
+				}
+				clearbeidouinfo(&temp->fmtinfo);
+				list_del(&temp->list);
+				if(temp != NULL){
+					free(temp);
+					temp = NULL;
+				}
 			}
 		}
 		if(buf[0] == 'E'){

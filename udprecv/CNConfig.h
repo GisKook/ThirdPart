@@ -21,6 +21,7 @@ struct cJSON;
 #define DBNAME "dbName"
 #define DBUSER "dbUser"
 #define DBPWD "dbPassword"
+#define FORWARDPORT "ForwardPort"
 
 class CNConfig{
 public:
@@ -37,7 +38,6 @@ private:
 	CNConfig(){};
 	~CNConfig(){};
 	CNConfig(const CNConfig&){};
-	CNConfig& operator=(const CNConfig&){};
 
 private:
 	std::map<std::string, std::string> m_mapConfig;

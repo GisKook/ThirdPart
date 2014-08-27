@@ -38,7 +38,7 @@ bool CNConfig::LoadFile( const char* filename)
 		fprintf(stderr,"Error before: [%s]\n",cJSON_GetErrorPtr());
 	}else{ 
 		int nCount = cJSON_GetArraySize(json);
-		assert(nCount==7);
+		assert(nCount==8);
 		if( !setconfig(json, PEERIP, "please check config file: ListenIP is not set!\n")||
 	//		!setconfig(json, PEERPORT, "please check config file: ListenPort is not set!\n")||
 			!setconfig(json, BINDPORT, "please check config file: BindPort is not set!\n")||
@@ -46,10 +46,10 @@ bool CNConfig::LoadFile( const char* filename)
 			!setconfig(json, DBPORT, "please check config file: dbPort is not set!\n")||
 			!setconfig(json, DBNAME, "please check config file: dbName is not set!\n")||
 			!setconfig(json, DBUSER, "please check config file: dbUser is not set!\n")||
-			!setconfig(json, DBPWD, "please check config file: dbPassword is not set!\n")){
-
+			!setconfig(json, DBPWD, "please check config file: dbPassword is not set!\n")||
+			!setconfig(json, FORWARDPORT, "please check config file: ForwardPort is not set!\n")){
+			
 		return false;
-
 		}
 
 	}

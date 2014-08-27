@@ -5,13 +5,45 @@
 #include <errno.h>
 #include <string.h>
 #include <pthread.h>
+#include <time.h>
 #include "udpreceiver.h"
 #include "CNConfig.h"
 #include "dataprocess.h"
+#include "toolkit.h"
+#include "CNDef.h"
 
 #define MAXBUFLEN 1024
+#define STARTTIME 1
+#define PRINT 2
+#define STOP 3
+#define CLEAR 4
+int getcmd(char* buf){
+	// 1 start time  -- 
+	// 2 print  --received beidou data
+	// 3 stop --stop print received beidou data
+	if(memcmp(buf, "start time", 9) == 0){
+		return STARTTIME;
+	}else if(memcmp(buf, "print",5) == 0){
+		return PRINT;
+	}else if(memcmp(buf, "stop", 4) == 0){
+		return STOP;
+	}else if(memcmp(buf, "clear", 5) == 0){
+		return CLEAR;
+	}else{
+		fprintf(stdout, "usage:\n");
+		fprintf(stdout, "    1. start time\n");
+		fprintf(stdout, "    2. print -- print received beidou data\n");
+		fprintf(stdout, "    3. stop -- stop print\n");
+		fprintf(stdout, "    4. quit\n");
+		fprintf(stdout, "    5. clear -- clear screen\n");
+	}
+	return 0;
+}
 
 int main(){
+	time_t t;
+	t = time(NULL);
+	char* starttime = ctime(&t);
 	CNConfig::GetInstance().LoadFile("./json.conf");
 	const char* peerip = CNConfig::GetInstance().GetValue(PEERIP);
 	const char* peerport = CNConfig::GetInstance().GetValue(PEERPORT);
@@ -46,6 +78,7 @@ int main(){
 	struct epoll_event ev[4];
 	char buf[MAXBUFLEN]={0};
 
+	int bprint = 0;
 	ssize_t len;
 	for(;;){
 
@@ -83,11 +116,35 @@ int main(){
 						close(efd);
 						sleep(1);
 						goto exit;
+					}else{
+						int cmd = getcmd(buf);
+						switch(cmd){
+							case STARTTIME:
+								fprintf(stdout, starttime);
+								break;
+							case CLEAR: 
+								fprintf(stdout, "\033[2J\033[1;1H\n");
+								break;
+							case PRINT:
+								bprint = 1;
+								break;
+							case STOP:
+								bprint = 0;
+								break;
+							default:
+								break;
+
+						}
+
 					}
-					printf("dd\n");
 				}
 				if(ev[i].data.fd == udp_socket){
 					dataprocess_push((unsigned char*)buf, len);
+					if(bprint == 1){ 
+						int	index = ISBIGENDIAN?(*(int*)(buf+2)):swab32((*(int*)(buf + 2)));
+						fprintf(stdout, "index :%d  ", index);
+						debug_printbytes((unsigned char*)buf, len);
+					}
 					write(fd[1], "0", 1);
 				}
 				if(errno != 0){

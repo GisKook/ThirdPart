@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <assert.h>
+#include <zmq.h>
 #include "list.h"
 #include "dataprocess.h"
 #include "PGRecordset.h"
@@ -13,10 +14,15 @@
 #include "CNDef.h"
 #include "toolkit.h"
 #include "protocolresolve.h"
+#include "beidoumessage.pb.h"
+
+using namespace std;
 
 struct list_head* head = NULL;
 struct param{
 	PGDatabase db;
+	void* zmq_ctx;
+	void* zmq_socket;
 	int fd; 
 }*p;
 
@@ -59,25 +65,101 @@ int getmilliondegree(unsigned char degree, unsigned char minute, unsigned char s
 #define MAXBUFLEN 8
 void* forwardmsg(void* rd){
 	int fd = *((int*)rd);
-    int len = 0;
+	int len = 0;
 	char buf[MAXBUFLEN];
 	struct list_head* pos = NULL;
 	struct list_head* n = NULL;
 	struct packet* temp;
+	struct datasegment* tempsegment;
+	int i;
+	Beidoumessage beidoumessage;
+	Communication* communication = beidoumessage.mutable_commuincation();
+	Communicationreceipt* communicationreceipt = beidoumessage.mutable_communicationreceipt();
+	Positioninfo* positioninfo = beidoumessage.mutable_postioninfo();
+
+	string str;
 	for(;;){
-        len = read(fd, buf, MAXBUFLEN);
+		len = read(fd, buf, MAXBUFLEN);
 		list_for_each_safe(pos, n, head){
 			temp = list_entry(pos, struct packet, list); 
 			if(temp->forward !=1){ 
+				for(i = 0; i<temp->fmtinfo.curdataentrycount; ++i){
+					tempsegment = temp->fmtinfo.recvdatasegment;
+					beidoumessage.set_messagetype(tempsegment->messagecategory);
+					str = "";
+					if( tempsegment->messagecategory == 0){ 
+						positioninfo->set_userid(tempsegment->message.posinfo->userid);
+						positioninfo->set_encryption(tempsegment->message.posinfo->encryption);
+						positioninfo->set_accuracy(tempsegment->message.posinfo->accuracy);
+						positioninfo->set_emergencypostion(tempsegment->message.posinfo->emergencypostion);
+						positioninfo->set_multivaluesolution(tempsegment->message.posinfo->multivaluesolution);
+						positioninfo->set_key(tempsegment->message.posinfo->key, 6);
+						positioninfo->set_longtitude_degree(tempsegment->message.posinfo->longitudedegree);
+						positioninfo->set_longtitude_minute(tempsegment->message.posinfo->longitudeminute);
+						positioninfo->set_longtitude_second(tempsegment->message.posinfo->longitudesecond);
+						positioninfo->set_longtitude_tenths(tempsegment->message.posinfo->longitudetenths);
+						positioninfo->set_latitude_degree(tempsegment->message.posinfo->latitudedegree);
+						positioninfo->set_latitude_minute(tempsegment->message.posinfo->latitudeminute);
+						positioninfo->set_latitude_second(tempsegment->message.posinfo->latitudesecond);
+						positioninfo->set_latitude_tenths(tempsegment->message.posinfo->latitudetenths);
+						positioninfo->set_geodeticheight(tempsegment->message.posinfo->geodeticheight);
+						positioninfo->set_detlaelevation(tempsegment->message.posinfo->detlaelevation); 
+					}else if( tempsegment->messagecategory == 3){ 
+						communication->set_messageform(tempsegment->message.cominfo->messageform);
+						communication->set_messagecategory(tempsegment->message.cominfo->messagecategory);
+						communication->set_encryption(tempsegment->message.cominfo->encryption);
+						communication->set_sendaddr(tempsegment->message.cominfo->sendaddr);
+						communication->set_recvaddr(tempsegment->message.cominfo->recvaddr);
+						communication->set_sendtime_hour(tempsegment->message.cominfo->sendtime.hour);
+						communication->set_sendtime_minute(tempsegment->message.cominfo->sendtime.minutes);
+						communication->set_sendtime_second(tempsegment->message.cominfo->sendtime.seconds);
+						communication->set_messagelength(tempsegment->message.cominfo->messagebytelength);
+						communication->set_key(tempsegment->message.cominfo->key, 6);
+						communication->set_messagebuffer(tempsegment->message.cominfo->messagebuffer, tempsegment->message.cominfo->messagebytelength);
+					}else if(tempsegment->messagecategory == 4){
+						communicationreceipt->set_sendaddr(tempsegment->message.rcptinfo->sendaddr);
+						communicationreceipt->set_recvaddr(tempsegment->message.rcptinfo->recvaddr);
+						communicationreceipt->set_receipttime_hour(tempsegment->message.rcptinfo->receipttime.hour);
+						communicationreceipt->set_receipttime_minute(tempsegment->message.rcptinfo->receipttime.minutes);
+						communicationreceipt->set_receipttime_second(tempsegment->message.rcptinfo->receipttime.seconds);
+	//					communicationreceipt->SerializeToString(&str); 
+					}else{
+						fprintf(stderr, "no such protocol %d\n", tempsegment->messagecategory);
+					}
+					beidoumessage.SerializeToString(&str);
+					if(!str.empty()){
+
+						zmq_msg_t msg;
+						int rc = zmq_msg_init_size(&msg, str.length());
+						assert(rc == 0);
+						memcpy(zmq_msg_data(&msg), str.c_str(), str.length()); 
+
+						rc = zmq_msg_send(&msg, p->zmq_socket, 0);
+						assert(rc != -1); 
+						temp->forward = 1;
+						if(temp->saved == 1){ 
+							free(temp->data);
+							clearbeidouinfo(&temp->fmtinfo);
+							list_del(&temp->list);
+							free(temp);
+						}
+					}
+
+				}    
+				assert(temp->fmtinfo.retrydataentrycount == 0);
 			}
-	    }
+		}
 		if(buf[0] == 'E'){
 			fprintf(stdout, "    forward beidou data thread exit successfuly.\n");
+			beidoumessage.release_commuincation();
+			beidoumessage.release_communicationreceipt();
+			beidoumessage.release_postioninfo();
+			zmq_ctx_destroy(p->zmq_ctx);
 			pthread_exit(0);
 		}
-		
+
 	}
-	
+
 }
 #define MAXSQLLEN 512
 #define MAXBYTELEN 256
@@ -90,7 +172,6 @@ void* savemsg(void* rd){
 
 	char sqlbuf[MAXSQLLEN];
 	char bytebuf[MAXBYTELEN];
-	int len_format = 0;
 	int index = 0;
 	int i;
 	struct packet* temp;
@@ -138,6 +219,12 @@ void* savemsg(void* rd){
 					continue;
 				}else{
 					temp->saved = 1;
+					if(temp->forward == 1){ 
+						free(temp->data);
+						clearbeidouinfo(&temp->fmtinfo);
+						list_del(&temp->list);
+						free(temp);
+					}
 				}	
 			}
 		}
@@ -189,7 +276,7 @@ void* parsemsg(void* rd){
 
 		list_for_each_safe(pos, n,head){
 			if( resolvebeidouinfo(&(list_entry(pos, struct packet, list)->fmtinfo),list_entry(pos,struct packet, list)->data) == -1){
-				fprintf(stderr, "parse error\n");
+				fprintf(stderr, "parse error: %s %d \n", __FILE__, __LINE__);
 			}	
 		}
 		write(rwfd[1],"1",1);
@@ -216,7 +303,6 @@ void dataprocess_push( unsigned char* buf, unsigned int len ) {
 void dataprocess_init(int fd){ 
 	const char* dbhost = CNConfig::GetInstance().GetValue(DBHOST);
 	const char* dbport = CNConfig::GetInstance().GetValue(DBPORT);
-	int ndbport = atoi(dbport);
 	const char* dbname = CNConfig::GetInstance().GetValue(DBNAME);
 	const char* dbuser = CNConfig::GetInstance().GetValue(DBUSER);
 	const char* dbpwd = CNConfig::GetInstance().GetValue(DBPWD);
@@ -236,6 +322,24 @@ void dataprocess_init(int fd){
 	p->fd = fd;
 	pthread_t tid;
 	pthread_create(&tid, NULL,parsemsg,(void*)p);
+
+	p->zmq_ctx = zmq_ctx_new();
+	if(p->zmq_ctx == NULL){
+		fprintf(stderr, "zmq create ctx fail.\n");
+	}
+
+	p->zmq_socket = zmq_socket(p->zmq_ctx, ZMQ_PUSH);
+	if(p->zmq_socket == NULL){
+		fprintf(stderr, "zmq create socket fail.\n");
+	}
+	const char* forwardport = CNConfig::GetInstance().GetValue(FORWARDPORT);
+	char forwardaddr[16] = {0};
+	sprintf(forwardaddr, "tcp://*:%s", forwardport);
+	int rc = zmq_bind(p->zmq_socket, forwardaddr);
+	if(rc != 0){
+		fprintf(stderr, "downstream error, zmq socket bind port fail. errno is %d %s %d\n", errno, __FILE__, __LINE__);
+	}
+
 }
 
 void dataprocess_clear(){

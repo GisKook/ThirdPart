@@ -4,4 +4,5 @@
 void dataprocess_push(unsigned char* buf, unsigned int len);
 void dataprocess_init(int fd);
 void dataprocess_clear();
+int dataprocess_exitok();
 #endif

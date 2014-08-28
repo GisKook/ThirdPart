@@ -12,11 +12,16 @@
 #include "toolkit.h"
 #include "CNDef.h"
 
+unsigned int totalreceived_udpmsg = 0;
+extern unsigned int totalforward_udpmsg;
+extern unsigned int totalsaved_udpmsg;
+
 #define MAXBUFLEN 1024
 #define STARTTIME 1
 #define PRINT 2
 #define STOP 3
 #define CLEAR 4
+#define DETAIL 5
 int getcmd(char* buf){
 	// 1 start time  -- 
 	// 2 print  --received beidou data
@@ -29,6 +34,8 @@ int getcmd(char* buf){
 		return STOP;
 	}else if(memcmp(buf, "clear", 5) == 0){
 		return CLEAR;
+	}else if(memcmp(buf, "detail", 6) == 0){
+		return DETAIL;
 	}else{
 		fprintf(stdout, "usage:\n");
 		fprintf(stdout, "    1. start time\n");
@@ -36,6 +43,7 @@ int getcmd(char* buf){
 		fprintf(stdout, "    3. stop -- stop print\n");
 		fprintf(stdout, "    4. quit\n");
 		fprintf(stdout, "    5. clear -- clear screen\n");
+		fprintf(stdout, "    6. detail -- clear screen\n");
 	}
 	return 0;
 }
@@ -79,6 +87,7 @@ int main(){
 	char buf[MAXBUFLEN]={0};
 
 	int bprint = 0;
+	int brecv = 1;
 	ssize_t len;
 	for(;;){
 
@@ -101,6 +110,7 @@ int main(){
 							buf[1] == 'u'&&
 							buf[2] == 'i'&&
 							buf[3] == 't'){
+						brecv = 0;
 						fprintf(stdout, "stop receive beidou data.\n");
 						write(fd[1], "E", 1);
 						if( -1 == epoll_ctl(efd, EPOLL_CTL_DEL, udp_socket, NULL)){
@@ -114,7 +124,10 @@ int main(){
 						close(fd[0]);
 						close(fd[1]);
 						close(efd);
-						sleep(1);
+						while(dataprocess_exitok() != 0){};
+						
+						dataprocess_clear();
+
 						goto exit;
 					}else{
 						int cmd = getcmd(buf);
@@ -131,15 +144,20 @@ int main(){
 							case STOP:
 								bprint = 0;
 								break;
+							case DETAIL:
+								fprintf(stdout, "total received udp message count: %d  --- ", totalreceived_udpmsg);
+								fprintf(stdout, "total forward udp message count: %d  --- ", totalforward_udpmsg);
+								fprintf(stdout, "total saved udp message count: %d \n", totalsaved_udpmsg);
+								break;
 							default:
 								break;
 
 						}
-
 					}
 				}
-				if(ev[i].data.fd == udp_socket){
+				if(ev[i].data.fd == udp_socket && brecv == 1){
 					dataprocess_push((unsigned char*)buf, len);
+					++totalreceived_udpmsg;
 					if(bprint == 1){ 
 						int	index = ISBIGENDIAN?(*(int*)(buf+2)):swab32((*(int*)(buf + 2)));
 						fprintf(stdout, "index :%d  ", index);

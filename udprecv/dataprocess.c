@@ -18,6 +18,9 @@
 
 using namespace std;
 
+int bexitok = -1;
+unsigned int totalforward_udpmsg = 0;
+unsigned int totalsaved_udpmsg = 0;
 struct list_head* head = NULL;
 struct param{
 	PGDatabase db;
@@ -33,6 +36,7 @@ struct packet {
 	struct list_head list;
 	unsigned char saved;
 	unsigned char forward;
+	unsigned char parsed;
 };
 
 //void settime(unsigned char* buf, unsigned char year, unsigned char month, unsigned char day, unsigned char hour, unsigned char minute, unsigned char second){
@@ -64,6 +68,7 @@ int getmilliondegree(unsigned char degree, unsigned char minute, unsigned char s
 
 #define MAXBUFLEN 8
 void* forwardmsg(void* rd){
+	GOOGLE_PROTOBUF_VERIFY_VERSION;
 	int fd = *((int*)rd);
 	int len = 0;
 	char buf[MAXBUFLEN];
@@ -86,7 +91,7 @@ void* forwardmsg(void* rd){
 				for(i = 0; i<temp->fmtinfo.curdataentrycount; ++i){
 					tempsegment = temp->fmtinfo.recvdatasegment;
 					beidoumessage.set_messagetype(tempsegment->messagecategory);
-					str = "";
+					std::string().swap(str);
 					if( tempsegment->messagecategory == 0){ 
 						positioninfo->set_userid(tempsegment->message.posinfo->userid);
 						positioninfo->set_encryption(tempsegment->message.posinfo->encryption);
@@ -139,29 +144,35 @@ void* forwardmsg(void* rd){
 						assert(rc != -1); 
 						zmq_msg_close(&msg);
 						temp->forward = 1;
+						++totalforward_udpmsg;
 					}
 
 				}    
 				assert(temp->fmtinfo.retrydataentrycount == 0);
 			}
-			if(temp->saved == 1 && temp->forward == 1){ 
-				if(temp->data != NULL){ 
-					free(temp->data);
-					temp->data = NULL;
-				}
-				clearbeidouinfo(&temp->fmtinfo);
-				list_del(&temp->list);
-				if(temp != NULL){
-					free(temp);
-					temp = NULL;
-				}
-			}
+//			if(temp->saved == 1 && temp->forward == 1){ 
+//				if(temp->data != NULL){ 
+//					free(temp->data);
+//					temp->data = NULL;
+//				}
+//				clearbeidouinfo(&temp->fmtinfo);
+//				list_del(&temp->list);
+//				if(temp != NULL){
+//					free(temp);
+//					temp = NULL;
+//				}
+//			}
 		}
 		if(buf[0] == 'E'){
 			fprintf(stdout, "    forward beidou data thread exit successfuly.\n");
 			beidoumessage.Clear();
+			if(p->zmq_socket != NULL){
+				zmq_close(p->zmq_socket);
+				p->zmq_socket = NULL;
+			}
 			zmq_ctx_destroy(p->zmq_ctx);
 			p->zmq_ctx = NULL;
+			google::protobuf::ShutdownProtobufLibrary();
 			pthread_exit(0);
 		}
 
@@ -226,6 +237,7 @@ void* savemsg(void* rd){
 					continue;
 				}else{
 					temp->saved = 1;
+					++totalsaved_udpmsg;
 				}	
 			}
 			if(temp->forward == 1 && temp->saved == 1){ 
@@ -242,7 +254,7 @@ void* savemsg(void* rd){
 			}
 		}
 		if(buf[0] == 'E'){
-			p->db.DisConnect();
+			p->db.DisConnect(); 
 			fprintf(stdout, "     save beidou data thread exit successfully.\n");
 			pthread_exit(0);
 		}
@@ -284,13 +296,18 @@ void* parsemsg(void* rd){
 			close(rwfd[1]);
 			close(fmfd[0]);
 			close(fmfd[1]);
+			bexitok = 0;
 			pthread_exit(0);
 		}
 
 		list_for_each_safe(pos, n,head){
-			if( resolvebeidouinfo(&(list_entry(pos, struct packet, list)->fmtinfo),list_entry(pos,struct packet, list)->data) == -1){
-				fprintf(stderr, "parse error: %s %d \n", __FILE__, __LINE__);
-			}	
+			if(list_entry(pos, struct packet, list)->parsed == 0){
+				if( resolvebeidouinfo(&(list_entry(pos, struct packet, list)->fmtinfo),list_entry(pos,struct packet, list)->data) == -1){
+					fprintf(stderr, "parse error: %s %d \n", __FILE__, __LINE__);
+				}else{
+					list_entry(pos, struct packet,list)->parsed = 1;	
+				}
+			}
 		}
 		write(rwfd[1],"1",1);
 		write(fmfd[1],"1",1);
@@ -356,7 +373,14 @@ void dataprocess_init(int fd){
 }
 
 void dataprocess_clear(){
-	free((void*)head);
-	head = NULL;
-	free((void*)p);
+	if(p != NULL){ 
+		free((void*)head);
+		head = NULL;
+		free((void*)p);
+		p = NULL;
+	}
+}
+
+int dataprocess_exitok(){
+	return bexitok;
 }

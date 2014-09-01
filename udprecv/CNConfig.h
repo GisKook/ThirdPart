@@ -22,6 +22,8 @@ struct cJSON;
 #define DBUSER "dbUser"
 #define DBPWD "dbPassword"
 #define FORWARDPORT "ForwardPort"
+#define STOREDBFREQUENCY "Storedbfrequency"
+#define STOREDBINTERVEL "Storedbinterval"
 
 class CNConfig{
 public:

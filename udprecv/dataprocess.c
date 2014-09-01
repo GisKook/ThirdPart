@@ -2,10 +2,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <errno.h>
 #include <assert.h>
 #include <zmq.h>
+#include <time.h>
 #include "list.h"
 #include "dataprocess.h"
 #include "PGRecordset.h"
@@ -21,6 +23,10 @@ using namespace std;
 int bexitok = -1;
 unsigned int totalforward_udpmsg = 0;
 unsigned int totalsaved_udpmsg = 0;
+unsigned int save_sendtimes = 0;
+unsigned int save_recvtimes = 0;
+int exit_save_ok = 0;
+int exit_forward_ok = 0;
 struct list_head* head = NULL;
 struct param{
 	PGDatabase db;
@@ -84,15 +90,20 @@ void* forwardmsg(void* rd){
 
 	string str;
 	for(;;){
-		len = read(fd, buf, MAXBUFLEN);
+		memset(buf, 0, MAXBUFLEN);
+		len = read(fd, buf, 1);
 		list_for_each_safe(pos, n, head){
 			temp = list_entry(pos, struct packet, list); 
 			if(temp->forward !=1){ 
 				for(i = 0; i<temp->fmtinfo.curdataentrycount; ++i){
 					tempsegment = temp->fmtinfo.recvdatasegment;
+					if(tempsegment == NULL){
+						fprintf(stderr, "tempsegment is NULL\n");
+						continue;
+					}
 					beidoumessage.set_messagetype(tempsegment->messagecategory);
 					std::string().swap(str);
-					if( tempsegment->messagecategory == 0){ 
+					if( tempsegment->messagecategory == 0 && tempsegment->message.posinfo != NULL){ 
 						positioninfo->set_userid(tempsegment->message.posinfo->userid);
 						positioninfo->set_encryption(tempsegment->message.posinfo->encryption);
 						positioninfo->set_accuracy(tempsegment->message.posinfo->accuracy);
@@ -109,7 +120,7 @@ void* forwardmsg(void* rd){
 						positioninfo->set_latitude_tenths(tempsegment->message.posinfo->latitudetenths);
 						positioninfo->set_geodeticheight(tempsegment->message.posinfo->geodeticheight);
 						positioninfo->set_detlaelevation(tempsegment->message.posinfo->detlaelevation); 
-					}else if( tempsegment->messagecategory == 3){ 
+					}else if( tempsegment->messagecategory == 3 && tempsegment->message.cominfo != NULL){ 
 						communication->set_messageform(tempsegment->message.cominfo->messageform);
 						communication->set_messagecategory(tempsegment->message.cominfo->messagecategory);
 						communication->set_encryption(tempsegment->message.cominfo->encryption);
@@ -121,14 +132,14 @@ void* forwardmsg(void* rd){
 						communication->set_messagelength(tempsegment->message.cominfo->messagebytelength);
 						communication->set_key(tempsegment->message.cominfo->key, 6);
 						communication->set_messagebuffer(tempsegment->message.cominfo->messagebuffer, tempsegment->message.cominfo->messagebytelength);
-					}else if(tempsegment->messagecategory == 4){
+					}else if(tempsegment->messagecategory == 4 && tempsegment->message.rcptinfo != NULL){
 						communicationreceipt->set_sendaddr(tempsegment->message.rcptinfo->sendaddr);
 						communicationreceipt->set_recvaddr(tempsegment->message.rcptinfo->recvaddr);
 						communicationreceipt->set_receipttime_hour(tempsegment->message.rcptinfo->receipttime.hour);
 						communicationreceipt->set_receipttime_minute(tempsegment->message.rcptinfo->receipttime.minutes);
 						communicationreceipt->set_receipttime_second(tempsegment->message.rcptinfo->receipttime.seconds);
 					}else{
-						fprintf(stderr, "no such protocol %d\n", tempsegment->messagecategory);
+						fprintf(stderr, "no such protocol  %d %s %d\n", tempsegment->messagecategory, __FILE__, __LINE__);
 					}
 					beidoumessage.SerializeToString(&str);
 					positioninfo->Clear();
@@ -145,26 +156,28 @@ void* forwardmsg(void* rd){
 						zmq_msg_close(&msg);
 						temp->forward = 1;
 						++totalforward_udpmsg;
+					}else{
+						assert(0);
 					}
 
 				}    
 				assert(temp->fmtinfo.retrydataentrycount == 0);
 			}
-//			if(temp->saved == 1 && temp->forward == 1){ 
-//				if(temp->data != NULL){ 
-//					free(temp->data);
-//					temp->data = NULL;
-//				}
-//				clearbeidouinfo(&temp->fmtinfo);
-//				list_del(&temp->list);
-//				if(temp != NULL){
-//					free(temp);
-//					temp = NULL;
-//				}
-//			}
+			if(temp->saved == 1 && temp->forward == 1){ 
+				if(temp->data != NULL){ 
+					free(temp->data);
+					temp->data = NULL;
+				}
+				clearbeidouinfo(&temp->fmtinfo);
+				list_del(&temp->list);
+				if(temp != NULL){
+					free(temp);
+					temp = NULL;
+				}
+			}
 		}
 		if(buf[0] == 'E'){
-			fprintf(stdout, "    forward beidou data thread exit successfuly.\n");
+			fprintf(stdout, "     forward beidou data thread exit successfuly.\n");
 			beidoumessage.Clear();
 			if(p->zmq_socket != NULL){
 				zmq_close(p->zmq_socket);
@@ -173,17 +186,22 @@ void* forwardmsg(void* rd){
 			zmq_ctx_destroy(p->zmq_ctx);
 			p->zmq_ctx = NULL;
 			google::protobuf::ShutdownProtobufLibrary();
+			exit_forward_ok = 1;
 			pthread_exit(0);
 		}
-
 	}
-
 }
+
 #define MAXSQLLEN 512
 #define MAXBYTELEN 256
+#define MAXSAVEBUFLEN 1024
 void* savemsg(void* rd){
+	const char* storedbfrequency = CNConfig::GetInstance().GetValue(STOREDBFREQUENCY);
+	int nstoredbfrequency = atoi(storedbfrequency);
+	const char* storedbinterval = CNConfig::GetInstance().GetValue(STOREDBINTERVEL);
+	int nstoredbinterval = atoi(storedbinterval);
 	int fd = *((int*)rd);
-	char buf[MAXBUFLEN];
+	char buf[MAXSAVEBUFLEN];
 	int len = 0;
 	struct list_head* pos = NULL;
 	struct list_head* n = NULL;
@@ -194,16 +212,32 @@ void* savemsg(void* rd){
 	int i;
 	struct packet* temp;
 	struct datasegment* tempdata;
+	int batchcount = 0;
+	time_t starttime = 0;
+	int recordtime = 0;
+	time_t endtime = 0;
+	int begintransaction = 0;
 	for(;;){ 
-		len = read(fd, buf, MAXBUFLEN);
+		memset(buf, 0, MAXSAVEBUFLEN);
+		len = read(fd, buf, MAXSAVEBUFLEN);
+		save_recvtimes += len;
 		list_for_each_safe(pos, n, head){ 
+			if( recordtime == 0 ){
+				starttime = time(NULL);
+				recordtime = 1;
+			}
 			temp = list_entry(pos,struct packet, list);
 			if(temp->saved != 1){
+				++batchcount;
 				memset(bytebuf,0,MAXBYTELEN); 
 				index = ISBIGENDIAN?(*(int*)(temp->data + 2)):swab32((*(int*)(temp->data + 2)));
 				hex2char(bytebuf, temp->data, temp->len);
-				if(!p->db.BeginTransaction()){
-					continue;
+				if(begintransaction == 0){
+					if(!p->db.BeginTransaction()){
+						continue;
+					}else{
+						begintransaction = 1;
+					}
 				}
 				memset(sqlbuf,0,MAXSQLLEN);
 				sprintf(sqlbuf, "insert into brs_udp_data(recv_time,recv_index,recv_data) VALUES(now(),%d,E\'\\\\x%s')",index,bytebuf);
@@ -233,29 +267,37 @@ void* savemsg(void* rd){
 				}    
 				assert(temp->fmtinfo.retrydataentrycount == 0);
 
-				if(!p->db.Commit()){
-					continue;
-				}else{
-					temp->saved = 1;
-					++totalsaved_udpmsg;
-				}	
-			}
-			if(temp->forward == 1 && temp->saved == 1){ 
-				if(temp->data != NULL){
-					free(temp->data);
-					temp->data = NULL;
+				temp->saved = 1;
+
+				endtime = time(NULL);
+				if(((int)(endtime - starttime) > nstoredbinterval)|| (batchcount >= nstoredbfrequency)){
+					if( p->db.Commit()){
+						begintransaction = 0;
+						recordtime = 0;
+						starttime = endtime;
+						totalsaved_udpmsg += batchcount;
+						batchcount = 0;
+					}
 				}
-				clearbeidouinfo(&temp->fmtinfo);
-				list_del(&temp->list);
-				if(temp != NULL){
-					free(temp);
-					temp = NULL;
-				}
+
 			}
+			//			if(temp->forward == 1 && temp->saved == 1){ 
+			//				if(temp->data != NULL){
+			//					free(temp->data);
+			//					temp->data = NULL;
+			//				}
+			//				clearbeidouinfo(&temp->fmtinfo);
+			//				list_del(&temp->list);
+			//				if(temp != NULL){
+			//					free(temp);
+			//					temp = NULL;
+			//				}
+			//			}
 		}
-		if(buf[0] == 'E'){
+		if(buf[len - 1] == 'E'){
 			p->db.DisConnect(); 
 			fprintf(stdout, "     save beidou data thread exit successfully.\n");
+			exit_save_ok = 1;
 			pthread_exit(0);
 		}
 	}
@@ -264,14 +306,16 @@ void* savemsg(void* rd){
 void* parsemsg(void* rd){
 	int fd = ((struct param*)rd)->fd;
 
-	int rwfd[2];
-	if(pipe(rwfd) == -1){
+	int savefd[2];
+	//if(pipe2(savefd, O_NONBLOCK) == -1){
+	if(pipe(savefd) == -1){
 		fprintf(stderr, "create pipe failed\n");
 	}
 	pthread_t tid_save;
-	pthread_create(&tid_save, NULL, savemsg, (void*)&rwfd[0]);
+	pthread_create(&tid_save, NULL, savemsg, (void*)&savefd[0]);
 
 	int fmfd[2];
+	//if(pipe2(fmfd, O_NONBLOCK) == -1){
 	if(pipe(fmfd) == -1){
 		fprintf(stderr, "create pipe failed\n");
 	}
@@ -282,18 +326,32 @@ void* parsemsg(void* rd){
 	int len = 0;
 	struct list_head* pos = NULL;
 	struct list_head* n = NULL;
+	int count = 0;
+	const char* storedbfrequency = CNConfig::GetInstance().GetValue(STOREDBFREQUENCY);
+	int nstoredbfrequency = atoi(storedbfrequency);
+	const char* storedbinterval = CNConfig::GetInstance().GetValue(STOREDBINTERVEL);
+	int nstoredbinterval = atoi(storedbinterval);
+
 	for(;;){ 
 		memset(buf, 0, MAXBUFLEN);
-		len = read(fd, buf, MAXBUFLEN);
+		len = read(fd, buf, 1);
 		if(buf[0] == 'E'){
 			fprintf(stdout, "data process module prepare to exit...\n");
-			write(rwfd[1],"E",1);
+			errno = 0;
+			write(savefd[1],"E",1);
+			//		while(errno == EAGAIN){
+			write(savefd[1],"E",1);
+			//		}
+
 			pthread_join(tid_save, NULL);
-			write(fmfd[1], "E",1);
+			errno = 0;
+			//		while(errno == EAGAIN){
+			write(fmfd[1], "E",1); 
+			//		}
 			pthread_join(tid_forward, NULL);
 			fprintf(stdout, "data process module exit successfully.\n");
-			close(rwfd[0]);
-			close(rwfd[1]);
+			close(savefd[0]);
+			close(savefd[1]);
 			close(fmfd[0]);
 			close(fmfd[1]);
 			bexitok = 0;
@@ -309,8 +367,15 @@ void* parsemsg(void* rd){
 				}
 			}
 		}
-		write(rwfd[1],"1",1);
+
+		if(save_sendtimes - save_recvtimes < 4096){ // 4096 magic number. do not write too much!
+			if( -1 != write(savefd[1],"1",1)){
+				++save_sendtimes;
+			}
+		}
+		
 		write(fmfd[1],"1",1);
+
 	}
 
 	pthread_exit(0);
@@ -330,7 +395,7 @@ void dataprocess_push( unsigned char* buf, unsigned int len ) {
 	list_add_tail(&p->list, head);
 }
 
-void dataprocess_init(int fd){ 
+int dataprocess_init(int fd){ 
 	const char* dbhost = CNConfig::GetInstance().GetValue(DBHOST);
 	const char* dbport = CNConfig::GetInstance().GetValue(DBPORT);
 	const char* dbname = CNConfig::GetInstance().GetValue(DBNAME);
@@ -344,7 +409,7 @@ void dataprocess_init(int fd){
 	conn.passwd = (char*)dbpwd; 
 	p = (struct param*)malloc(sizeof(struct param));
 	if( 0 != p->db.Connect(conn)){
-		return;
+		return -1;
 	}
 
 	head = (struct list_head*)malloc(sizeof(struct list_head));
@@ -370,6 +435,8 @@ void dataprocess_init(int fd){
 		fprintf(stderr, "downstream error, zmq socket bind port fail. errno is %d %s %d\n", errno, __FILE__, __LINE__);
 	}
 
+	return tid;
+
 }
 
 void dataprocess_clear(){
@@ -381,6 +448,41 @@ void dataprocess_clear(){
 	}
 }
 
-int dataprocess_exitok(){
-	return bexitok;
+int dataprocess_listempty(){
+	return list_empty_careful(head);
 }
+
+int dataprocess_exitok(){
+	if(exit_save_ok == 1 && exit_forward_ok == 1){
+		return 1;
+	}else{
+		return 0;
+	}
+}
+
+void dataprocess_print_list(){
+	struct list_head* pos;
+	struct list_head* n;
+	struct packet* entry; 
+
+	list_for_each_safe(pos, n, head){
+		entry = list_entry(pos, struct packet, list); 
+		if(entry->data != NULL){
+			fprintf(stdout, "received beidou data: ");
+			debug_printbytes(entry->data, entry->len);
+			fprintf(stdout, "parsed:%d--", entry->parsed);
+			fprintf(stdout, "forward:%d--", entry->forward);
+			fprintf(stdout, "saved:%d--", entry->saved);
+			if(entry->fmtinfo.recvdatasegment != NULL){
+				struct datasegment* ds = entry->fmtinfo.recvdatasegment;
+				if(ds->message.posinfo == NULL && ds->message.cominfo == NULL && ds->message.rcptinfo == NULL){
+					fprintf(stdout, "someting goes wrong. datasegment message is null--\n");
+				}
+				fprintf(stdout, "all is well\n");
+			}else{
+				fprintf(stdout, "someting goes wrong. datasegment is null--\n");
+			}			
+		}
+	}
+}
+

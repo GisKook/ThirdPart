@@ -49,7 +49,7 @@ bool PGDatabase::BeginTransaction() {
 	if (m_pConnect == NULL) {
 		return false;
 	}
-	PGresult* res = PQexec(m_pConnect, "begin transaction");
+	PGresult* res = PQexec(m_pConnect, "begin");
 	if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 		fprintf(stderr, "BEGIN command failed: %s\n", PQerrorMessage(m_pConnect));
 		PQclear(res);

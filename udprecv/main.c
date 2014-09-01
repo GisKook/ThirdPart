@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <string.h>
 #include <pthread.h>
+#include <pthread.h>
 #include <time.h>
 #include "udpreceiver.h"
 #include "CNConfig.h"
@@ -22,6 +23,8 @@ extern unsigned int totalsaved_udpmsg;
 #define STOP 3
 #define CLEAR 4
 #define DETAIL 5
+#define LISTEMPTY 6
+#define CONFIG 7
 int getcmd(char* buf){
 	// 1 start time  -- 
 	// 2 print  --received beidou data
@@ -36,14 +39,22 @@ int getcmd(char* buf){
 		return CLEAR;
 	}else if(memcmp(buf, "detail", 6) == 0){
 		return DETAIL;
+	}else if(memcmp(buf, "list", 4) == 0){
+		return LISTEMPTY;
+	}else if(memcmp(buf, "config", 6) == 0){
+		return CONFIG;
 	}else{
+		fprintf(stdout, "-------------------------------------\n");
 		fprintf(stdout, "usage:\n");
 		fprintf(stdout, "    1. start time\n");
 		fprintf(stdout, "    2. print -- print received beidou data\n");
 		fprintf(stdout, "    3. stop -- stop print\n");
 		fprintf(stdout, "    4. quit\n");
 		fprintf(stdout, "    5. clear -- clear screen\n");
-		fprintf(stdout, "    6. detail -- clear screen\n");
+		fprintf(stdout, "    6. detail -- received udp saved udp forward udp\n");
+		fprintf(stdout, "    7. list -- is dataprocess ok\n");
+		fprintf(stdout, "    8. config -- show configures\n");
+		fprintf(stdout, "-------------------------------------\n");
 	}
 	return 0;
 }
@@ -124,7 +135,8 @@ int main(){
 						close(fd[0]);
 						close(fd[1]);
 						close(efd);
-						while(dataprocess_exitok() != 0){};
+						while(dataprocess_exitok() != 1){};
+						while(dataprocess_listempty() == 0){};
 						
 						dataprocess_clear();
 
@@ -149,6 +161,30 @@ int main(){
 								fprintf(stdout, "total forward udp message count: %d  --- ", totalforward_udpmsg);
 								fprintf(stdout, "total saved udp message count: %d \n", totalsaved_udpmsg);
 								break;
+							case LISTEMPTY:
+								if(dataprocess_listempty() == 0){
+									fprintf(stdout, "still have data to process.\n");
+									dataprocess_print_list();
+									
+								}else{
+									fprintf(stdout, "no data to process.\n");
+								}
+								break;
+							case CONFIG:
+								fprintf(stdout, "-------------------------------------\n");
+								fprintf(stdout, "|PeerIP          : %s\n", CNConfig::GetInstance().GetValue(PEERIP));
+								fprintf(stdout, "|BindPort        : %s\n", CNConfig::GetInstance().GetValue(BINDPORT));
+								fprintf(stdout, "|dbHost          : %s\n", CNConfig::GetInstance().GetValue(DBHOST));
+								fprintf(stdout, "|dbPort          : %s\n", CNConfig::GetInstance().GetValue(DBPORT));
+								fprintf(stdout, "|dbName          : %s\n", CNConfig::GetInstance().GetValue(DBNAME));
+								fprintf(stdout, "|dbUser          : %s\n", CNConfig::GetInstance().GetValue(DBUSER));
+								fprintf(stdout, "|dbPassword      : %s\n", CNConfig::GetInstance().GetValue(DBPWD));
+								fprintf(stdout, "|ForwardPort     : %s\n", CNConfig::GetInstance().GetValue(FORWARDPORT));
+								fprintf(stdout, "|Storedbfrequency: %s\n", CNConfig::GetInstance().GetValue(STOREDBFREQUENCY));
+								fprintf(stdout, "|Storedbinterval : %s\n", CNConfig::GetInstance().GetValue(STOREDBINTERVEL));
+								fprintf(stdout, "-------------------------------------\n");
+								break;
+							break;
 							default:
 								break;
 

@@ -431,9 +431,9 @@ pthread_t dataprocess_init(int fd){
 	}
 	const char* forwardport = CNConfig::GetInstance().GetValue(FORWARDPORT);
 	const char* forwardip = CNConfig::GetInstance().GetValue(FORWARDIP);
-	char forwardaddr[32] = {0};
-	sprintf(forwardaddr, "tcp://%s:%s", forwardip, forwardport);
-	assert(strlen(forwardaddr)<=32);
+	char forwardaddr[64] = {0};
+	int len = sprintf(forwardaddr, "tcp://%s:%s", forwardip, forwardport);
+	assert(len<=64);
 	int rc = zmq_connect(p->zmq_socket, forwardaddr);
 	if(rc != 0){
 		fprintf(stderr, "downstream error, zmq socket bind port fail. errno is %d %s %d\n", errno, __FILE__, __LINE__);

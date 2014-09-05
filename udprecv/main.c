@@ -81,7 +81,7 @@ int main(){
 		close(udp_socket);
 		return -1;
 	}
-	dataprocess_init(fd[0]);
+	pthread_t tid = dataprocess_init(fd[0]);
 
 	int efd = udprecv_createepoll();
 	if( efd == -1 ){
@@ -131,12 +131,11 @@ int main(){
 							fprintf(stderr, "del socket from epoll fail.\n");
 						}
 
+						pthread_join(tid, NULL);
 						close(udp_socket);
 						close(fd[0]);
 						close(fd[1]);
 						close(efd);
-						while(dataprocess_exitok() != 1){};
-						while(dataprocess_listempty() == 0){};
 						
 						dataprocess_clear();
 

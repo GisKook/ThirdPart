@@ -10,7 +10,7 @@ int main(){
 	assert(ctx != NULL);
 	void* socket = zmq_socket(ctx, ZMQ_PULL);
 	assert(ctx != NULL);
-	int rc = zmq_connect(socket, "tcp://192.168.1.155:40000");
+	int rc = zmq_bind(socket, "tcp://*:40000");
 	assert(rc == 0);
 
 	zmq_msg_t msg;
@@ -20,6 +20,8 @@ int main(){
 	char buf[512];
 	string str;
 	int ncount = 0;
+	
+	assert(rc != -1); 
 	for(;;){
 		memset(buf, 0, 512);
 		rc = zmq_msg_recv(&msg, socket, 0);

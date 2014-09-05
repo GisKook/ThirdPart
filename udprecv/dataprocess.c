@@ -1,3 +1,4 @@
+#include "beidoumessage.pb.h"
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,17 +17,13 @@
 #include "CNDef.h"
 #include "toolkit.h"
 #include "protocolresolve.h"
-#include "beidoumessage.pb.h"
 
 using namespace std;
 
-int bexitok = -1;
 unsigned int totalforward_udpmsg = 0;
 unsigned int totalsaved_udpmsg = 0;
 unsigned int save_sendtimes = 0;
 unsigned int save_recvtimes = 0;
-int exit_save_ok = 0;
-int exit_forward_ok = 0;
 struct list_head* head = NULL;
 struct param{
 	PGDatabase db;
@@ -87,11 +84,14 @@ void* forwardmsg(void* rd){
 	Communication* communication = beidoumessage.mutable_commuincation();
 	Communicationreceipt* communicationreceipt = beidoumessage.mutable_communicationreceipt();
 	Positioninfo* positioninfo = beidoumessage.mutable_positioninfo();
-
+	unsigned char * message = NULL;
+	unsigned int messagelen = 0;
+	const char * name = CNConfig::GetInstance().GetValue(NAME);
 	string str;
 	for(;;){
 		memset(buf, 0, MAXBUFLEN);
 		len = read(fd, buf, 1);
+		
 		list_for_each_safe(pos, n, head){
 			temp = list_entry(pos, struct packet, list); 
 			if(temp->forward !=1){ 
@@ -146,10 +146,32 @@ void* forwardmsg(void* rd){
 					communication->Clear();
 					communicationreceipt->Clear();
 					if(!str.empty()){ 
+						// 发送格式: 发送方(20bytes) 接收方类型(1byte) 接收方(20bytes) 数据长度(2bytes) 数据
+						if(messagelen < str.length() + 43){
+							if(message != NULL){
+								free(message);
+								message = NULL;
+							} 
+							messagelen = str.length() + 43;
+							message = (unsigned char*)malloc(messagelen);
+							if(message == NULL){
+								fprintf(stderr, "malloc error. %s %s %d\n", __FILE__, __FUNCTION__, __LINE__);
+								continue;	
+							}
+						}
+						memset(message, 0 , messagelen);
+						memcpy(message, name ,min(strlen(name), 20));
+						if(!ISBIGENDIAN){
+							*((unsigned short*)(message+41)) = str.length();
+						}else{
+							*((unsigned short*)(*message+41)) = swab16(str.length());
+						}
+						memcpy(message+43, str.c_str(), str.length());
+
 						zmq_msg_t msg;
-						int rc = zmq_msg_init_size(&msg, str.length());
+						int rc = zmq_msg_init_size(&msg, messagelen);
 						assert(rc == 0);
-						memcpy(zmq_msg_data(&msg), str.c_str(), str.length()); 
+						memcpy(zmq_msg_data(&msg), message, messagelen); 
 
 						rc = zmq_msg_send(&msg, p->zmq_socket, 0);
 						assert(rc != -1); 
@@ -163,30 +185,22 @@ void* forwardmsg(void* rd){
 				}    
 				assert(temp->fmtinfo.retrydataentrycount == 0);
 			}
-			if(temp->saved == 1 && temp->forward == 1){ 
-				if(temp->data != NULL){ 
-					free(temp->data);
-					temp->data = NULL;
-				}
-				clearbeidouinfo(&temp->fmtinfo);
-				list_del(&temp->list);
-				if(temp != NULL){
-					free(temp);
-					temp = NULL;
-				}
-			}
+//			if(temp->saved == 1 && temp->forward == 1){ 
+//				if(temp->data != NULL){ 
+//					free(temp->data);
+//					temp->data = NULL;
+//				}
+//				clearbeidouinfo(&temp->fmtinfo);
+//				list_del(&temp->list);
+//				if(temp != NULL){
+//					free(temp);
+//					temp = NULL;
+//				}
+//			}
 		}
 		if(buf[0] == 'E'){
-			fprintf(stdout, "     forward beidou data thread exit successfuly.\n");
+			fprintf(stdout, "     forward beidou data thread exit successfully.\n");
 			beidoumessage.Clear();
-			if(p->zmq_socket != NULL){
-				zmq_close(p->zmq_socket);
-				p->zmq_socket = NULL;
-			}
-			zmq_ctx_destroy(p->zmq_ctx);
-			p->zmq_ctx = NULL;
-			google::protobuf::ShutdownProtobufLibrary();
-			exit_forward_ok = 1;
 			pthread_exit(0);
 		}
 	}
@@ -281,23 +295,22 @@ void* savemsg(void* rd){
 				}
 
 			}
-			//			if(temp->forward == 1 && temp->saved == 1){ 
-			//				if(temp->data != NULL){
-			//					free(temp->data);
-			//					temp->data = NULL;
-			//				}
-			//				clearbeidouinfo(&temp->fmtinfo);
-			//				list_del(&temp->list);
-			//				if(temp != NULL){
-			//					free(temp);
-			//					temp = NULL;
-			//				}
-			//			}
+						if(temp->forward == 1 && temp->saved == 1){ 
+							if(temp->data != NULL){
+								free(temp->data);
+								temp->data = NULL;
+							}
+							clearbeidouinfo(&temp->fmtinfo);
+							list_del(&temp->list);
+							if(temp != NULL){
+								free(temp);
+								temp = NULL;
+							}
+						}
 		}
 		if(buf[len - 1] == 'E'){
 			p->db.DisConnect(); 
 			fprintf(stdout, "     save beidou data thread exit successfully.\n");
-			exit_save_ok = 1;
 			pthread_exit(0);
 		}
 	}
@@ -326,35 +339,24 @@ void* parsemsg(void* rd){
 	int len = 0;
 	struct list_head* pos = NULL;
 	struct list_head* n = NULL;
-	int count = 0;
-	const char* storedbfrequency = CNConfig::GetInstance().GetValue(STOREDBFREQUENCY);
-	int nstoredbfrequency = atoi(storedbfrequency);
-	const char* storedbinterval = CNConfig::GetInstance().GetValue(STOREDBINTERVEL);
-	int nstoredbinterval = atoi(storedbinterval);
 
 	for(;;){ 
 		memset(buf, 0, MAXBUFLEN);
 		len = read(fd, buf, 1);
 		if(buf[0] == 'E'){
 			fprintf(stdout, "data process module prepare to exit...\n");
-			errno = 0;
-			write(savefd[1],"E",1);
-			//		while(errno == EAGAIN){
-			write(savefd[1],"E",1);
-			//		}
 
+			write(savefd[1],"E",1);
 			pthread_join(tid_save, NULL);
-			errno = 0;
-			//		while(errno == EAGAIN){
+
 			write(fmfd[1], "E",1); 
-			//		}
 			pthread_join(tid_forward, NULL);
+
 			fprintf(stdout, "data process module exit successfully.\n");
 			close(savefd[0]);
 			close(savefd[1]);
 			close(fmfd[0]);
 			close(fmfd[1]);
-			bexitok = 0;
 			pthread_exit(0);
 		}
 
@@ -395,7 +397,7 @@ void dataprocess_push( unsigned char* buf, unsigned int len ) {
 	list_add_tail(&p->list, head);
 }
 
-int dataprocess_init(int fd){ 
+pthread_t dataprocess_init(int fd){ 
 	const char* dbhost = CNConfig::GetInstance().GetValue(DBHOST);
 	const char* dbport = CNConfig::GetInstance().GetValue(DBPORT);
 	const char* dbname = CNConfig::GetInstance().GetValue(DBNAME);
@@ -428,19 +430,28 @@ int dataprocess_init(int fd){
 		fprintf(stderr, "zmq create socket fail.\n");
 	}
 	const char* forwardport = CNConfig::GetInstance().GetValue(FORWARDPORT);
-	char forwardaddr[16] = {0};
-	sprintf(forwardaddr, "tcp://*:%s", forwardport);
-	int rc = zmq_bind(p->zmq_socket, forwardaddr);
+	const char* forwardip = CNConfig::GetInstance().GetValue(FORWARDIP);
+	char forwardaddr[32] = {0};
+	sprintf(forwardaddr, "tcp://%s:%s", forwardip, forwardport);
+	assert(strlen(forwardaddr)<=32);
+	int rc = zmq_connect(p->zmq_socket, forwardaddr);
 	if(rc != 0){
 		fprintf(stderr, "downstream error, zmq socket bind port fail. errno is %d %s %d\n", errno, __FILE__, __LINE__);
 	}
 
 	return tid;
-
 }
 
 void dataprocess_clear(){
 	if(p != NULL){ 
+		if(p->zmq_socket != NULL){
+			zmq_close(p->zmq_socket);
+			p->zmq_socket = NULL;
+		}
+		zmq_ctx_term(p->zmq_ctx);
+		p->zmq_ctx = NULL;
+		google::protobuf::ShutdownProtobufLibrary();
+
 		free((void*)head);
 		head = NULL;
 		free((void*)p);
@@ -450,14 +461,6 @@ void dataprocess_clear(){
 
 int dataprocess_listempty(){
 	return list_empty_careful(head);
-}
-
-int dataprocess_exitok(){
-	if(exit_save_ok == 1 && exit_forward_ok == 1){
-		return 1;
-	}else{
-		return 0;
-	}
 }
 
 void dataprocess_print_list(){

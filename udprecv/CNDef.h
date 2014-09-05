@@ -26,6 +26,7 @@
 #define unlikely(x)
 #endif
 
+#define min(x,y) ((x>y)?x:y)
 static union{
 	char c[4];
 	unsigned long l;

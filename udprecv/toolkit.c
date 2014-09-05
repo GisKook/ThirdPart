@@ -17,3 +17,4 @@ void hex2char(char* charbuf, unsigned char* hexbuf, unsigned int len){
 		charbuf[j+1] = byteliterals[*(hexbuf+i)][1];
 	}
 }
+

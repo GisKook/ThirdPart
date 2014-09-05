@@ -38,15 +38,17 @@ bool CNConfig::LoadFile( const char* filename)
 		fprintf(stderr,"Error before: [%s]\n",cJSON_GetErrorPtr());
 	}else{ 
 		int nCount = cJSON_GetArraySize(json);
-		assert(nCount==10);
+		assert(nCount==12);
 		if( !setconfig(json, PEERIP, "please check config file: ListenIP is not set!\n")||
 	//		!setconfig(json, PEERPORT, "please check config file: ListenPort is not set!\n")||
 			!setconfig(json, BINDPORT, "please check config file: BindPort is not set!\n")||
+			!setconfig(json, NAME, "please check config file: Name is not set!\n")||
 			!setconfig(json, DBHOST, "please check config file: dbHost is not set!\n")||
 			!setconfig(json, DBPORT, "please check config file: dbPort is not set!\n")||
 			!setconfig(json, DBNAME, "please check config file: dbName is not set!\n")||
 			!setconfig(json, DBUSER, "please check config file: dbUser is not set!\n")||
 			!setconfig(json, DBPWD, "please check config file: dbPassword is not set!\n")||
+			!setconfig(json, FORWARDIP, "please check config file: ForwardIP is not set!\n")||
 			!setconfig(json, FORWARDPORT, "please check config file: ForwardPort is not set!\n")||
 			!setconfig(json, STOREDBFREQUENCY, "please check config file: Storedbfrequency is not set!\n")||
 			!setconfig(json, STOREDBINTERVEL, "please check config file: Storedbinterval is not set!\n")){

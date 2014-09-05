@@ -13,6 +13,7 @@
 
 struct cJSON;
 
+#define NAME "Name"
 #define PEERIP "PeerIP"
 #define PEERPORT "PeerPort"
 #define BINDPORT "BindPort"
@@ -21,6 +22,7 @@ struct cJSON;
 #define DBNAME "dbName"
 #define DBUSER "dbUser"
 #define DBPWD "dbPassword"
+#define FORWARDIP "ForwardIP"
 #define FORWARDPORT "ForwardPort"
 #define STOREDBFREQUENCY "Storedbfrequency"
 #define STOREDBINTERVEL "Storedbinterval"

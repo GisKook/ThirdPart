@@ -171,6 +171,7 @@ int main(){
 								break;
 							case CONFIG:
 								fprintf(stdout, "-------------------------------------\n");
+								fprintf(stdout, "|Name            : %s\n", CNConfig::GetInstance().GetValue(NAME));
 								fprintf(stdout, "|PeerIP          : %s\n", CNConfig::GetInstance().GetValue(PEERIP));
 								fprintf(stdout, "|BindPort        : %s\n", CNConfig::GetInstance().GetValue(BINDPORT));
 								fprintf(stdout, "|dbHost          : %s\n", CNConfig::GetInstance().GetValue(DBHOST));
@@ -178,6 +179,7 @@ int main(){
 								fprintf(stdout, "|dbName          : %s\n", CNConfig::GetInstance().GetValue(DBNAME));
 								fprintf(stdout, "|dbUser          : %s\n", CNConfig::GetInstance().GetValue(DBUSER));
 								fprintf(stdout, "|dbPassword      : %s\n", CNConfig::GetInstance().GetValue(DBPWD));
+								fprintf(stdout, "|ForwardIP       : %s\n", CNConfig::GetInstance().GetValue(FORWARDIP));
 								fprintf(stdout, "|ForwardPort     : %s\n", CNConfig::GetInstance().GetValue(FORWARDPORT));
 								fprintf(stdout, "|Storedbfrequency: %s\n", CNConfig::GetInstance().GetValue(STOREDBFREQUENCY));
 								fprintf(stdout, "|Storedbinterval : %s\n", CNConfig::GetInstance().GetValue(STOREDBINTERVEL));

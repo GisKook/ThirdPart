@@ -161,10 +161,10 @@ void* forwardmsg(void* rd){
 						}
 						memset(message, 0 , messagelen);
 						memcpy(message, name ,min(strlen(name), 20));
-						if(!ISBIGENDIAN){
+						if(ISBIGENDIAN){
 							*((unsigned short*)(message+41)) = str.length();
 						}else{
-							*((unsigned short*)(*message+41)) = swab16(str.length());
+							*((unsigned short*)(message+41)) = swab16(str.length());
 						}
 						memcpy(message+43, str.c_str(), str.length());
 

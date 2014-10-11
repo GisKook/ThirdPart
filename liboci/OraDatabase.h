@@ -11,43 +11,6 @@
 #include <vector> 
 #include "DatabaseDef.h"
 
-typedef struct OCIEnv           OCIEnv;            /* OCI environment handle */
-typedef struct OCIError         OCIError;                /* OCI error handle */
-typedef struct OCISvcCtx        OCISvcCtx;             /* OCI service handle */
-typedef struct OCIServer        OCIServer;              /* OCI Server handle */
-typedef struct OCISession       OCISession;     /* OCI Authentication handle */
-typedef struct OCIStmt          OCIStmt;             /* OCI statement handle */
-typedef struct OCITrans         OCITrans;          /* OCI Transaction handle */
-
-#define CN_SUCCESS 0
-#define CN_FAIL   1
-#define CN_NODATA 2
-#define CN_NEEDMORE 3
-
-typedef enum{
-	ORANULL = 0,
-	ORAINT,
-	ORAFLOAT,
-	ORATEXT,
-}OraDatatype;
-
-class ENGINE_API CNVARIANT{
-public:
-	CNVARIANT(){};
-	CNVARIANT(OraDatatype datatype){
-		eDataType=datatype;
-	}
-	OraDatatype eDataType; // 数据类型 0.int;1.text;2.double;3.blob
-	typedef union{
-		int iValue;
-		float fValue;
-		char pValue[255]; 
-	} CNVAR;
-	CNVAR value;
-#define iValue value.iValue
-#define fValue value.fValue
-#define pValue value.pValue
-};
 
 class ENGINE_API OraDatabase{
 public:
@@ -77,7 +40,8 @@ public:
 	// brief 得到的select 语句的结果
 	// param[in] sql语句
 	// param[in/out] 绑定的数据 传入指定数据类型，得到的值
-	int Query(const char* strSQL, CNVARIANT* p, int nCount);
+	// param[in] 列的个数
+	int Query(const char* strSQL, CNVARIANT* p, int nColCount);
 
 	// brief 得到下一条数据
 	// param[in] 调用Fetch前要先Query
@@ -99,8 +63,8 @@ public:
 	// brief 得到链接字符串
 	OraConnInfo* GetConnInfo(){return &m_ConnInfo;};
 
-
 	//int Query(const char* strSQL, std::vector<CNVARIANT>& vVal, int nRow);
+
 private:
 	OCIEnv* m_pEnv; 
 	OCIError* m_pErr;
@@ -109,8 +73,14 @@ private:
 	OCISession* m_pSession;
 	OCITrans* m_pTrans;
 	OCIStmt* m_pStmt;
+	OCISubscription* m_pSubscription;
 	
 private:
 	OraConnInfo m_ConnInfo;
 };
+
+class ENGINE_API OraDatabaseMonitor{
+
+};
+
 #endif

@@ -19,7 +19,7 @@
 			Name="Debug|Win32"
 			OutputDirectory="./lib"
 			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="2"
+			ConfigurationType="1"
 			UseOfMFC="0"
 			CharacterSet="2"
 			>
@@ -42,11 +42,15 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="include"
+				IgnoreStandardIncludePath="false"
+				GeneratePreprocessedFile="0"
+				KeepComments="false"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="0"
 				WarningLevel="3"
 				DebugInformationFormat="4"
+				CompileAs="2"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -175,9 +179,21 @@
 			<File
 				RelativePath=".\DatabasePool.cpp"
 				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\OraDatabase.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\oradb_monitor.c"
 				>
 			</File>
 			<File
@@ -203,14 +219,6 @@
 			<File
 				RelativePath=".\test.cpp"
 				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\testdbpool.cpp"
@@ -252,6 +260,10 @@
 			</File>
 			<File
 				RelativePath=".\OraDatabase.h"
+				>
+			</File>
+			<File
+				RelativePath=".\oradb_monitor.h"
 				>
 			</File>
 			<File

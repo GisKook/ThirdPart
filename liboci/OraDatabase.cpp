@@ -10,6 +10,10 @@ using namespace std;
 //#define CNPRINTF TRACE0 
 #define CNPRINTF printf
 
+#define bit(a,b) ((a)&(b))
+
+OCIError* g_pErr;
+OCIEnv* g_pEnv;
 int checkerr(OCIError *errhp,sword status,const char* strSQL = "" )
 {
 	text errbuf[512]={0};
@@ -76,12 +80,15 @@ m_pStmt(NULL)
 }
 
 int OraDatabase::Init() {
-	sword swRetval = OCIEnvCreate(&m_pEnv, OCI_THREADED, NULL,NULL, NULL,NULL, 0, NULL);
+	sword swRetval = OCIEnvCreate(&m_pEnv, OCI_THREADED|OCI_EVENTS|OCI_OBJECT, NULL,NULL, NULL,NULL, 0, NULL);
 	assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO);
 	if (!(swRetval==OCI_SUCCESS_WITH_INFO || swRetval == OCI_SUCCESS)) {
 		return CN_FAIL;
 	}
+	g_pEnv = m_pEnv;
 	swRetval = OCIHandleAlloc(m_pEnv,(void**)&m_pErr, OCI_HTYPE_ERROR, 0, NULL); assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO);
+	g_pErr = m_pErr;
+	
 	swRetval = OCIHandleAlloc(m_pEnv,(void**)&m_pSvcCtx, OCI_HTYPE_SVCCTX, 0, NULL); assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO);
 	swRetval = OCIHandleAlloc(m_pEnv,(void**)&m_pServer, OCI_HTYPE_SERVER , 0, NULL); assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO);
 	swRetval = OCIAttrSet(m_pSvcCtx,OCI_HTYPE_SVCCTX, m_pServer, 0,OCI_ATTR_SERVER, m_pErr);assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO);
@@ -89,6 +96,7 @@ int OraDatabase::Init() {
 	swRetval = OCIAttrSet(m_pSvcCtx,OCI_HTYPE_SVCCTX, m_pSession, 0,OCI_ATTR_SESSION, m_pErr);assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO);
 	swRetval = OCIHandleAlloc(m_pEnv,(void**)&m_pTrans, OCI_HTYPE_TRANS, 0, NULL); assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO);
 	swRetval = OCIHandleAlloc(m_pEnv,(void**)&m_pStmt, OCI_HTYPE_STMT, 0, NULL); assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO);
+	swRetval = OCIHandleAlloc (m_pEnv, (dvoid **) &m_pSubscription,OCI_HTYPE_SUBSCRIPTION, (size_t) 0, (dvoid **) 0);assert(swRetval==OCI_SUCCESS || swRetval==OCI_SUCCESS_WITH_INFO);
 
 	//CNPRINTF(".");
 	return CN_SUCCESS; 

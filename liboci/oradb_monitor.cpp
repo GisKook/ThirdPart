@@ -1,5 +1,5 @@
 #include "oci.h"
-#include "oradb_monitor.h"
+#include "oradb_monitor.h" 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -174,14 +174,24 @@ void registersubscriptioncallback(void *ctx, OCISubscription *subscrhp, void *pa
 		fprintf(stdout, "oracle database monitor is not set callback function.\n");
 		return;
 	} 
-	if((int)(payl) <= 54){  // 54 magic number get from list codes 12+dbnamelen+21 plus 18 byte rowid 
+	if((int)(payl) <= 54){  // 54 magic number get from list codes 12+dbnamelen+35 plus 18 byte rowid 
 		fprintf(stdout, "oracle call back function get payload is not current.\n");
 		return ;
 	}
 	struct oradb_monitor_result omr; 
 	/*
-	接下来这段代码是要分析内存了所有的magic number都是根据payload分析出来的 :P
-	*/
+	 *接下来这段代码是要分析内存.超级多的magic number都是根据payload分析出来的. :P 这超级多的magic number 都是在在register 时设置了
+	 OCI_ATTR_CHNF_ROWIDS 和 OCI_SUBSCR_CQ_QOS_QUERY两个。如果这两个改了分析内存的代码也得跟着改.目前在两个oracle上测试都能正常使用。
+
+	 checkerr(odbm->err, OCIAttrSet(odbm->subscription, OCI_HTYPE_SUBSCRIPTION,
+	 (dvoid *)&rowids, sizeof(ub4), 
+	 OCI_ATTR_CHNF_ROWIDS, odbm->err));
+
+	// 	ub4 qosflags = OCI_SUBSCR_CQ_QOS_QUERY;
+	checkerr(odbm->err, OCIAttrSet(odbm->subscription, OCI_HTYPE_SUBSCRIPTION,
+	(dvoid *)&qosflags, sizeof(ub4),
+		OCI_ATTR_SUBSCR_CQ_QOSFLAGS, odbm->err));
+	 */
 	unsigned char dbnamelen = 0;
 	dbnamelen = *(((unsigned char*)payload)+11);
 	omr.dbname = (char*)malloc(dbnamelen+1);

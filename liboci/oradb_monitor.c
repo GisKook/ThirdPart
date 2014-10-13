@@ -168,10 +168,34 @@ void registersubscriptioncallback(void *ctx, OCISubscription *subscrhp, void *pa
 	/*
 	按照oracle官网上"Continuous Query Notification(version 11.2)"根本就行不通，也不知道是哪里错了，但是可以根据payload中的内存中分析出表名称、操作、rowid
 	先用分析内存的方法搞吧。
+	不用通过subscrhp得到通知类型了，在register时已经定死了。就是query change 类型。
 	*/ 
-	if (*g_odbm->oradb_monitor_callback == NULL) {
+	if (*g_odbm->callback== NULL ) {
 		fprintf(stdout, "oracle database monitor is not set callback function.\n");
+		return;
+	} 
+	if((int)(payl) <= 54){  // 54 magic number get from list codes 12+dbnamelen+21 plus 18 byte rowid 
+		fprintf(stdout, "oracle call back function get payload is not current.\n");
+		return ;
 	}
+	struct oradb_monitor_result omr; 
+	/*
+	接下来这段代码是要分析内存了所有的magic number都是根据payload分析出来的 :P
+	*/
+	unsigned char dbnamelen = 0;
+	dbnamelen = *(((unsigned char*)payload)+11);
+	omr.dbname = (char*)malloc(dbnamelen+1);
+	memcpy((void*)omr.dbname, (((unsigned char*)(payload))+12), dbnamelen);
+	omr.dbname[dbnamelen] = '\0';
+	unsigned char tablenamelen = 0;
+	tablenamelen = *(((unsigned char*)payload)+12+dbnamelen+35);
+	omr.tablename = (char*)malloc(tablenamelen+1);
+	memcpy((void*)omr.tablename, (((unsigned char*)(payload))+12+dbnamelen+36), tablenamelen);
+	omr.tablename[tablenamelen] = 0;
+	memcpy(omr.rowid, ((unsigned char*)payload) + (int)payl - 18, 18);
+	omr.rowid[18] = '\0';
+	omr.opcode = *((unsigned char*)(((unsigned char*)payload)+(int)payl-21));
+	(g_odbm->callback)(&omr);
 
 	/*OCIColl *table_changes = (OCIColl *)0;
 	OCIColl *row_changes = (OCIColl *)0;
@@ -386,8 +410,8 @@ int oradb_monitor_monitor(struct oradb_monitor* odbm, const char* sql, CNVARIANT
 	return 0;
 }
 
-void oradb_monitor_setcallback( struct oradb_monitor* odbm, oradb_monitor_callback )
+void oradb_monitor_setcallback( struct oradb_monitor* odbm, oradb_monitor_callback callback)
 {
-	odbm->oradb_monitor_callback = oradb_monitor_callback; 
+	odbm->callback = callback; 
 }
 

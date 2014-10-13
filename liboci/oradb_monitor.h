@@ -11,6 +11,15 @@
 #ifndef LIBOCI_ORADB_MONITOR
 #define LIBOCI_ORADB_MONITOR
 
+struct oradb_monitor_result{
+	char * dbname;
+	char * tablename;
+	unsigned char opcode; 
+	char rowid[19]; // magic 18 for rowid is 18 length
+};
+
+typedef void (*oradb_monitor_callback)(struct oradb_monitor_result *);
+
 struct oradb_monitor{ 
 	OCIEnv* env; 
 	OCIError* err;
@@ -20,7 +29,7 @@ struct oradb_monitor{
 	//OCITrans* trans;
 	OCIStmt* stmt;
 	OCISubscription* subscription;
-	void (*oradb_monitor_callback)(void*);
+	oradb_monitor_callback callback;
 };
 
 enum oradb_monitor_opcode{ 
@@ -28,14 +37,6 @@ enum oradb_monitor_opcode{
 	oradb_monitor_update = 4,
 	oradb_monitor_delete = 8,
 };
-
-struct oradb_monitor_result{
-	const char * tablename;
-	unsigned char opcode; 
-	char rowid[18]; // magic 18 for rowid is 18 length
-};
-
-typedef void (*oradb_monitor_callback)(void *) ;
 
 struct oradb_monitor* oradb_monitor_create(OraConnInfo * conninfo);
 

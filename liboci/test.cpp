@@ -6,21 +6,25 @@
 #include "oradb_monitor.h"
 using namespace std;
 
+void (my_oradb_monitor_callback)(struct oradb_monitor_result * omr){ 
+	printf("db    name is : %s\n", omr->dbname);
+	printf("table name is : %s\n", omr->tablename);
+	printf("opcode     is : %d\n", omr->opcode);
+	printf("rowid      is : %s\n", omr->rowid);
+}
+
 int main(){
 	OraConnInfo conn;
-	conn.dbName="";
-	
-
- 	conn.host="192.168.2.31";
- 	conn.port=1521;
- 	conn.dbName="axttest";
- 	conn.login="dkpps2";
- 	conn.passwd="dkpps";
-//	conn.host="192.168.1.166";
-//	conn.port=1521;
-//	conn.dbName="TEST";
-//	conn.login="zhangkai";
-//	conn.passwd="zhangkai";
+// 	conn.host="192.168.2.31";
+// 	conn.port=1521;
+// 	conn.dbName="axttest";
+// 	conn.login="dkpps2";
+// 	conn.passwd="dkpps";
+	conn.host="192.168.1.166";
+	conn.port=1521;
+	conn.dbName="TEST";
+	conn.login="zhangkai";
+	conn.passwd="zhangkai";
 	OraDatabase db;
 	db.Init();
 	if (!db.IsConnectionValid()) { printf("not connect\n");
@@ -36,7 +40,7 @@ int main(){
 	CNVARIANT valm2;
 	valm2.eDataType = ORATEXT;
 	oradb_monitor_monitor(odbm, "select name from test_table21", &valm2, 1);
-
+	oradb_monitor_setcallback(odbm, my_oradb_monitor_callback);
 
 	OraConnInfo* temp=db.GetConnInfo();
 
@@ -46,9 +50,9 @@ int main(){
 	//db.ExecSQL("drop table TEST_TABLE22");
 	//db.ExecSQL("CREATE TABLE TEST_TABLE21(NAME VARCHAR2(50 CHAR), id INT, tt float )");
 	db.ExecSQL("INSERT INTO TEST_TABLE21 VALUES('id1', 1, 4.4)");
-	db.ExecSQL("commit");
+	//db.ExecSQL("commit");
 	db.ExecSQL("update test_table21 set name='   gggg' where id=1");
-	db.ExecSQL("commit");
+	//db.ExecSQL("commit");
 		
 	CNVARIANT val[3];
 	val[0].eDataType=ORATEXT;

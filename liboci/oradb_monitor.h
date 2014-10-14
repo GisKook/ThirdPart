@@ -38,14 +38,14 @@ enum oradb_monitor_opcode{
 	oradb_monitor_delete = 8,
 };
 
-struct oradb_monitor* oradb_monitor_create(OraConnInfo * conninfo);
+ENGINE_API struct oradb_monitor* oradb_monitor_create(OraConnInfo * conninfo);
 
-void oradb_monitor_destroy(struct oradb_monitor*);
+ENGINE_API void oradb_monitor_destroy(struct oradb_monitor*);
 
-int oradb_monitor_register(struct oradb_monitor*);
+ENGINE_API int oradb_monitor_register(struct oradb_monitor*);
 
-int oradb_monitor_monitor(struct oradb_monitor* ,const char* sql, CNVARIANT* val, unsigned char valcount);
+ENGINE_API int oradb_monitor_monitor(struct oradb_monitor* ,const char* sql, CNVARIANT* val, unsigned char valcount);
 
-void oradb_monitor_setcallback(struct oradb_monitor*, oradb_monitor_callback);
+ENGINE_API void oradb_monitor_setcallback(struct oradb_monitor*, oradb_monitor_callback);
 
 #endif

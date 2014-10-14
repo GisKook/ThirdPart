@@ -15,16 +15,16 @@ void (my_oradb_monitor_callback)(struct oradb_monitor_result * omr){
 
 int main(){
 	OraConnInfo conn;
-// 	conn.host="192.168.2.31";
-// 	conn.port=1521;
-// 	conn.dbName="axttest";
-// 	conn.login="dkpps2";
-// 	conn.passwd="dkpps";
-	conn.host="192.168.1.166";
-	conn.port=1521;
-	conn.dbName="TEST";
-	conn.login="zhangkai";
-	conn.passwd="zhangkai";
+ 	conn.host="192.168.2.31";
+ 	conn.port=1521;
+ 	conn.dbName="axttest";
+ 	conn.login="dkpps2";
+ 	conn.passwd="dkpps";
+//	conn.host="192.168.1.166";
+//	conn.port=1521;
+//	conn.dbName="TEST";
+//	conn.login="zhangkai";
+//	conn.passwd="zhangkai";
 	OraDatabase db;
 	db.Init();
 	if (!db.IsConnectionValid()) { printf("not connect\n");
@@ -53,7 +53,7 @@ int main(){
 	//db.ExecSQL("commit");
 	db.ExecSQL("update test_table21 set name='   gggg' where id=1");
 	//db.ExecSQL("commit");
-		
+	Sleep(60000);
 	CNVARIANT val[3];
 	val[0].eDataType=ORATEXT;
 	val[1].eDataType=ORAINT;

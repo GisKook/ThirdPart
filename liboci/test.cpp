@@ -9,8 +9,11 @@ using namespace std;
 void (my_oradb_monitor_callback)(struct oradb_monitor_result * omr){ 
 	printf("db    name is : %s\n", omr->dbname);
 	printf("table name is : %s\n", omr->tablename);
-	printf("opcode     is : %d\n", omr->opcode);
-	printf("rowid      is : %s\n", omr->rowid);
+	printf("changed rows count is : %d\n", omr->rowscount);
+	int i, j = 0; 
+	for(i = 0; i < omr->rowscount; ++i,j+=19){
+		printf("rowsid %s opcode %d \n", omr->rowsid+j, omr->opcodes[i]);
+	}
 }
 
 int main(){
@@ -54,6 +57,7 @@ int main(){
 	db.ExecSQL("update test_table21 set name='   gggg' where id=1");
 	//db.ExecSQL("commit");
 	Sleep(60000);
+	system("pause");
 	CNVARIANT val[3];
 	val[0].eDataType=ORATEXT;
 	val[1].eDataType=ORAINT;

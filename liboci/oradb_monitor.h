@@ -14,8 +14,9 @@
 struct oradb_monitor_result{
 	char * dbname;
 	char * tablename;
-	unsigned char opcode; 
-	char rowid[19]; // magic 18 for rowid is 18 length
+	unsigned short rowscount;
+	unsigned char * opcodes; 
+	char * rowsid; // magic 18 for rowid is 18 length
 };
 
 typedef void (*oradb_monitor_callback)(struct oradb_monitor_result *);

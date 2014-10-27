@@ -12,7 +12,7 @@
 #define ENGINE_API __declspec(dllexport)
 #else
 #define ENGINE_API
-#endif // _DEBUG
+#endif 
 
 typedef struct{
 	char* host;
@@ -61,5 +61,26 @@ public:
 #define pValue value.pValue
 
 };
+
+static union{
+	char c[4];
+	unsigned long l;
+}endian_test={{'l','?','?','b'}};
+#define ENDIANNESS ((char)endian_test.l)
+#define ISBIGENDIAN (ENDIANNESS=='b')
+
+#if defined(_WIN32)
+#define swap16(x) ((*(((unsigned short*)(x))) >> 8) | (*(x) << 8))
+#elif defined(__linux__)
+#define swap16(x) \
+	({\
+	unsigned short _x=(x);\
+	((unsigned short)(\
+	(((unsigned short)(_x)&(unsigned short)0x00ffU)<<8)|\
+	(((unsigned short)(_x)&(unsigned short)0xff00U)>>8) ));\
+})
+#endif
+
+
 //extern char g_fmt[128];
 #endif

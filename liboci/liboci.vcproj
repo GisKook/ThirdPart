@@ -179,21 +179,13 @@
 			<File
 				RelativePath=".\DatabasePool.cpp"
 				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\OraDatabase.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\oradb_monitor.c"
+				RelativePath=".\oradb_monitor.cpp"
 				>
 			</File>
 			<File
@@ -219,6 +211,14 @@
 			<File
 				RelativePath=".\test.cpp"
 				>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath=".\testdbpool.cpp"

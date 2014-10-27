@@ -164,6 +164,20 @@ void processquerychanges(struct oradb_monitor* odbm, OCIColl *query_changes)
 	}
 }
 #endif
+
+void oradb_monitor_result_clear( struct oradb_monitor_result * omr)
+{
+	free(omr->dbname);
+	omr->dbname = NULL;
+	free(omr->tablename);
+	omr->tablename = NULL;
+	free(omr->opcodes);
+	omr->opcodes = NULL;
+	free(omr->rowsid);
+	omr->rowsid = NULL;
+}
+
+
 void registersubscriptioncallback(void *ctx, OCISubscription *subscrhp, void *payload, unsigned int *payl, void *descriptor, unsigned int mode){
 	/*
 	按照oracle官网上"Continuous Query Notification(version 11.2)"根本就行不通，也不知道是哪里错了，但是可以根据payload中的内存中分析出表名称、操作、rowid
@@ -192,20 +206,57 @@ void registersubscriptioncallback(void *ctx, OCISubscription *subscrhp, void *pa
 	(dvoid *)&qosflags, sizeof(ub4),
 		OCI_ATTR_SUBSCR_CQ_QOSFLAGS, odbm->err));
 	 */
+	/*  事例
+	00 01 f0 3e 87 7f 00 00 00 06 00 07 61 78 74 74 65 73 74 01 00 04 00 82 f5 16 00 3f 87 7f 00 00 14 00 01 00 00 00 04 00 13 44 4b 50 50 53 32 2e 54 45 53 54 5f 54 41 42 4c 45 32 31 00 01 55 0e 
+	00 05
+	00 00 00 04 00 12 41 41 41 56 56 34 41 41 46 41 41 41 41 55 63 41 41 41 
+	00 00 00 04 00 12 41 41 41 56 56 34 41 41 46 41 41 41 41 55 63 41 41 43 
+	00 00 00 04 00 12 41 41 41 56 56 34 41 41 46 41 41 41 41 55 63 41 41 44 
+	00 00 00 04 00 12 41 41 41 56 56 34 41 41 46 41 41 41 41 55 63 41 41 45 
+	00 00 00 04 00 12 41 41 41 56 56 34 41 41 46 41 41 41 41 55 65 41 41 41 
+	*/
+	unsigned char* p = (unsigned char*)payload;
 	unsigned char dbnamelen = 0;
-	dbnamelen = *(((unsigned char*)payload)+11);
+	p += 11;
+	dbnamelen = *p; // 仅支持最大255个字符的数据库名
 	omr.dbname = (char*)malloc(dbnamelen+1);
-	memcpy((void*)omr.dbname, (((unsigned char*)(payload))+12), dbnamelen);
+	++p;
+	memcpy((void*)omr.dbname, p, dbnamelen);
+	p+=dbnamelen;
 	omr.dbname[dbnamelen] = '\0';
 	unsigned char tablenamelen = 0;
-	tablenamelen = *(((unsigned char*)payload)+12+dbnamelen+35);
+	p+=21; // 仅支持最大255个字符的表名
+	//tablenamelen = *(((unsigned char*)payload)+12+dbnamelen+35);  // OCI_SUBSCR_CQ_QOS_QUERY
+	tablenamelen = *p; // OCI_SUBSCR_CQ_QOS_BEST_EFFORT 
+	++p;
 	omr.tablename = (char*)malloc(tablenamelen+1);
-	memcpy((void*)omr.tablename, (((unsigned char*)(payload))+12+dbnamelen+36), tablenamelen);
+	//memcpy((void*)omr.tablename, (((unsigned char*)(payload))+12+dbnamelen+36), tablenamelen);// OCI_SUBSCR_CQ_QOS_QUERY
+	memcpy((void*)omr.tablename, p, tablenamelen); // OCI_SUBSCR_CQ_QOS_BEST_EFFORT 
+	p+=tablenamelen;
 	omr.tablename[tablenamelen] = 0;
-	memcpy(omr.rowid, ((unsigned char*)payload) + (int)payl - 18, 18);
-	omr.rowid[18] = '\0';
-	omr.opcode = *((unsigned char*)(((unsigned char*)payload)+(int)payl-21));
+	p+=4;
+	
+	if(!ISBIGENDIAN){
+		omr.rowscount = swap16(p);
+	}else{
+		memcpy(&omr.rowscount, p, 2);
+	}
+	p+=2;
+	omr.rowsid = (char*)malloc(omr.rowscount * 19);
+	omr.opcodes = (unsigned char*)malloc(omr.rowscount);
+	memset(omr.opcodes, 0, omr.rowscount);
+	int i,j=0;
+	for (i = 0; i < omr.rowscount; ++i,j+=19) {
+		p+=3;
+		omr.opcodes[i] = *p;
+		p+=3;
+		memcpy(omr.rowsid+j, p, 18); 
+		*(omr.rowsid+j+18) = '\0';
+		p+=18;
+	}
+	 
 	(g_odbm->callback)(&omr);
+	oradb_monitor_result_clear(&omr);
 
 	/*OCIColl *table_changes = (OCIColl *)0;
 	OCIColl *row_changes = (OCIColl *)0;
@@ -315,7 +366,7 @@ int oradb_monitor_register( struct oradb_monitor* odbm)
 {
 	ub4 subnamespace = OCI_SUBSCR_NAMESPACE_DBCHANGE;
 	boolean rowids = TRUE;
-	ub4 qosflags = OCI_SUBSCR_CQ_QOS_QUERY;
+	ub4 qosflags = OCI_SUBSCR_CQ_QOS_BEST_EFFORT;//OCI_SUBSCR_CQ_QOS_QUERY;
 	ub4 qosstatus = OCI_SUBSCR_QOS_RELIABLE;
 	ub4 timeout = 1;
 
@@ -424,4 +475,3 @@ void oradb_monitor_setcallback( struct oradb_monitor* odbm, oradb_monitor_callba
 {
 	odbm->callback = callback; 
 }
-

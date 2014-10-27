@@ -79,8 +79,4 @@ private:
 	OraConnInfo m_ConnInfo;
 };
 
-class ENGINE_API OraDatabaseMonitor{
-
-};
-
 #endif

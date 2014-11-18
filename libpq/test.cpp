@@ -15,6 +15,8 @@ int main(){
 	db.BeginTransaction();
 	db.Exec("drop table data");
 	db.Exec("create table data( index integer, value text)");
+	db.AddListener("data");
+	db.GetNotify();
 	char sql[128] = {0};
 	for (int i = 0; i < 100; i++) {
 		sprintf(sql, "insert into data(index, value) values(%d,\'%s\')",i, "beidou");
@@ -28,7 +30,6 @@ int main(){
 		printf(" %s\n",res->GetValue(0,1));
 		res->Destroy();
 	}
-
 
 	db.Commit();
 	db.DisConnect();

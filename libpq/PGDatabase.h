@@ -47,6 +47,19 @@ public:
 
 	// brief 结束事务
 	bool Commit();
+
+	// ----linux----
+	// brief 对表添加监听
+	bool AddListener(const char* strTablename); 
+
+	// brief 对表删除监听
+	bool RemoveListener(const char* strTablename);
+
+	// brief 得到修改的数据
+	void GetNotify();
+	
+	// ----linux----
+
 private:
 	PGconn* m_pConnect;
 	

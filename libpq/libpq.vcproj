@@ -58,7 +58,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libpq.lib"
+				AdditionalDependencies="libpq.lib ws2_32.lib"
 				OutputFile="$(OutDir)\libpostgres.dll"
 				AdditionalLibraryDirectories="./lib"
 				GenerateDebugInformation="true"

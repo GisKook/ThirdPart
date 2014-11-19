@@ -11,65 +11,80 @@ extern Datum trigf(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(trigf);
 
-	Datum
+Datum
 trigf(PG_FUNCTION_ARGS)
 {
 	TriggerData *trigdata = (TriggerData *) fcinfo->context;
 	TupleDesc   tupdesc;
 	HeapTuple   rettuple;
-	char       *when;
-	bool        checknull = false;
-	bool        isnull;
-	int         ret, i;
+
+	char        opcode = 'X'; // U for update I for insert D for delete X for unknow
 
 	/* make sure it's called as a trigger at all */
 	if (!CALLED_AS_TRIGGER(fcinfo))
 		elog(ERROR, "trigf: not called by trigger manager");
 
 	/* tuple to return to executor */
-	if (TRIGGER_FIRED_BY_UPDATE(trigdata->tg_event))
+	if (TRIGGER_FIRED_BY_UPDATE(trigdata->tg_event)){
+		opcode = 'U';
 		rettuple = trigdata->tg_newtuple;
-	else
+	}else{
+		if (TRIGGER_FIRED_BY_INSERT(trigdata->tg_event)) {
+			opcode = 'I';
+		}else if(TRIGGER_FIRED_BY_DELETE(trigdata->tg_event)){
+			opcode = 'D';
+		}
 		rettuple = trigdata->tg_trigtuple;
-
-	/* check for null values */
-	if (!TRIGGER_FIRED_BY_DELETE(trigdata->tg_event)
-			&& TRIGGER_FIRED_BEFORE(trigdata->tg_event))
-		checknull = true;
-
-	if (TRIGGER_FIRED_BEFORE(trigdata->tg_event))
-		when = "before";
-	else
-		when = "after ";
+	}
 
 	tupdesc = trigdata->tg_relation->rd_att;
 
-	/* connect to SPI manager */
+	char notify[1024] = {0};
+	unsigned int notifylen = 0;
+	unsigned int natts = trigdata->tg_relation->rd_att->natts;
+	char* value ;
+	unsigned int valuelen = 0;
+	notify[0] = opcode;
+	notify[1] = ' ';
+	notifylen = 2;
+	
+	int i = 0;
+	for(; i < natts; ++i){
+		value = SPI_getvalue(rettuple, tupdesc, i+1);
+		if (value == NULL) {
+			value = "$";
+		}
+		valuelen = strlen(value);
+		memcpy(notify+notifylen, value,valuelen); 
+		*(notify+notifylen+valuelen) = ' ';
+		notifylen = notifylen+valuelen+1;
+	}
+	elog(INFO, "%s", notify);
+
+	int ret;
+	char *tablename = " ttest,";
 	if ((ret = SPI_connect()) < 0)
-		elog(ERROR, "trigf (fired %s): SPI_connect returned %d", when, ret);
+		elog(ERROR, "SPI connect return %d", ret);
 
 	/* get number of rows in table */
-	ret = SPI_exec("SELECT count(*) FROM ttest", 0);
+	char notifycmd[1024] = {0};
+	unsigned int notifycmdlen = sizeof("NOTIFY")-1;
+	memcpy(notifycmd, "NOTIFY", notifycmdlen);
+	notifycmd[notifycmdlen++] = ' ';
+	memcpy(&notifycmd[notifycmdlen], tablename, sizeof(tablename)-1);
+	notifycmdlen += sizeof(tablename) - 1;
+	notifycmd[notifycmdlen++] = '\'';
+	memcpy(&notifycmd[notifycmdlen], notify, notifylen);
+	notifycmdlen += notifylen;
+	notifycmd[notifycmdlen++] = '\'';
+	elog(INFO, "%s", notifycmd);
+
+	ret = SPI_exec(notifycmd,0);
 
 	if (ret < 0)
-		elog(ERROR, "trigf (fired %s): SPI_exec returned %d", when, ret);
-
-	/* count(*) returns int8, so be careful to convert */
-	i = DatumGetInt64(SPI_getbinval(SPI_tuptable->vals[0],
-				SPI_tuptable->tupdesc,
-				1,
-				&isnull));
-
-	elog (INFO, "trigf (fired %s): there are %d rows in ttest", when, i);
+		elog(ERROR, " SPI_exec returned %d", ret);
 
 	SPI_finish();
-
-	if (checknull)
-	{
-		SPI_getbinval(rettuple, tupdesc, 1, &isnull);
-		if (isnull)
-			rettuple = NULL;
-	}
 
 	return PointerGetDatum(rettuple);
 }

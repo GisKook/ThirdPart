@@ -12,11 +12,13 @@ int main(){
 
 	PGDatabase db;
 	db.Connect(conn);
+	db.AddListener("ttest");
+#ifdef __linux__
+	db.GetNotify();
 	db.BeginTransaction();
+#endif
 	db.Exec("drop table data");
 	db.Exec("create table data( index integer, value text)");
-//	db.AddListener("ttest");
-//	db.GetNotify();
 	char sql[128] = {0};
 	for (int i = 0; i < 100; i++) {
 		sprintf(sql, "insert into data(index, value) values(%d,\'%s\')",i, "beidou");

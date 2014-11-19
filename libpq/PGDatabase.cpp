@@ -166,8 +166,8 @@ bool PGDatabase::RemoveListener( const char* strTablename )
 
 void PGDatabase::GetNotify()
 {
-	int nnotifies = 0;
-    while (nnotifies < 4)
+	PGnotify   *notify;
+    while (true)
     {
         /*
          * Sleep until something happens on the connection.  We use select(2)
@@ -191,7 +191,6 @@ void PGDatabase::GetNotify()
         }
 
 		fprintf(stderr, "abc\n");
-		PGnotify   *notify;
         /* Now check for input */
         PQconsumeInput(m_pConnect);
         while ((notify = PQnotifies(m_pConnect)) != NULL)
@@ -200,7 +199,6 @@ void PGDatabase::GetNotify()
                     "ASYNC NOTIFY of '%s' received from backend PID %d\n",
                     notify->relname, notify->be_pid);
             PQfreemem(notify);
-            nnotifies++;
         }
     }
 }

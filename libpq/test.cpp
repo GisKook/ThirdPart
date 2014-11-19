@@ -15,8 +15,8 @@ int main(){
 	db.BeginTransaction();
 	db.Exec("drop table data");
 	db.Exec("create table data( index integer, value text)");
-	db.AddListener("data");
-	db.GetNotify();
+//	db.AddListener("ttest");
+//	db.GetNotify();
 	char sql[128] = {0};
 	for (int i = 0; i < 100; i++) {
 		sprintf(sql, "insert into data(index, value) values(%d,\'%s\')",i, "beidou");

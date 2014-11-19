@@ -2,7 +2,10 @@
 #include "PGDatabase.h" 
 #include <assert.h>
 #include <stdlib.h>
-#include <WinSock2.h>
+#include <string.h>
+#ifdef __linux__
+#include <errno.h>
+#endif
 
 int PGDatabase::Connect( const PGConnInfo& dbConnInfo ) {
 	m_pConnect= PQsetdbLogin(dbConnInfo.pghost, dbConnInfo.pgport,
@@ -116,6 +119,7 @@ PGRecordset* PGDatabase::Query( const char* strSQL ) {
 	return pRecordset;
 }
 
+#ifdef __linux__
 bool PGDatabase::AddListener( const char* strTablename )
 {
 	char listentable[256] = {0};
@@ -200,3 +204,4 @@ void PGDatabase::GetNotify()
         }
     }
 }
+#endif

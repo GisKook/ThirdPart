@@ -48,6 +48,7 @@ public:
 	// brief 结束事务
 	bool Commit();
 
+#ifdef __linux__
 	// ----linux----
 	// brief 对表添加监听
 	bool AddListener(const char* strTablename); 
@@ -59,6 +60,7 @@ public:
 	void GetNotify();
 	
 	// ----linux----
+#endif
 
 private:
 	PGconn* m_pConnect;

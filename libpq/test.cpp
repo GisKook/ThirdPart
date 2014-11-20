@@ -13,10 +13,8 @@ int main(){
 	PGDatabase db;
 	db.Connect(conn);
 	db.AddListener("ttest");
-#ifdef __linux__
 	db.GetNotify();
 	db.BeginTransaction();
-#endif
 	db.Exec("drop table data");
 	db.Exec("create table data( index integer, value text)");
 	char sql[128] = {0};

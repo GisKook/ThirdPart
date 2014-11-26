@@ -2,6 +2,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+void * pgdb_monitor(void * par){
+	struct pgdb_monitor_result *pmr = (struct pgdb_monitor_result *)par;
+	printf("here.%s %s\n", pmr->opvalues, pmr->tablename);
+	return NULL;
+}
+
 int main(){
 	PGConnInfo conn;
 	conn.pghost = "192.168.1.155";
@@ -12,8 +18,9 @@ int main(){
 
 	PGDatabase db;
 	db.Connect(conn);
-	db.AddListener("ttest");
-	db.GetNotify();
+	db.AddListener("qhsrvaccount");
+	db.GetNotify((pgdb_monitor_callback)pgdb_monitor);
+	db.Exec("insert into qhsrvaccount(qtsserverid , qtsentId    , qtsloginname, qtspassword , qtssendfreq , qtncreatetime) values('电科导航', '电科导航', 'dkdh7', 'dkdh7', 1, TIMESTAMP '2004-10-19 10:23:54');");
 	db.BeginTransaction();
 	db.Exec("drop table data");
 	db.Exec("create table data( index integer, value text)");

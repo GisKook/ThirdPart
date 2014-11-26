@@ -2,9 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void * pgdb_monitor(void * par){
+void * pgdb_monitor(void * par, void* param2){
 	struct pgdb_monitor_result *pmr = (struct pgdb_monitor_result *)par;
-	printf("here.%s %s\n", pmr->opvalues, pmr->tablename);
+	char* test = (char*)param2;
+	printf("here.%s %s %s\n", pmr->opvalues, pmr->tablename, test);
 	return NULL;
 }
 
@@ -19,7 +20,7 @@ int main(){
 	PGDatabase db;
 	db.Connect(conn);
 	db.AddListener("qhsrvaccount");
-	db.GetNotify((pgdb_monitor_callback)pgdb_monitor);
+	db.GetNotify((pgdb_monitor_callback)pgdb_monitor, "abc");
 	db.Exec("insert into qhsrvaccount(qtsserverid , qtsentId    , qtsloginname, qtspassword , qtssendfreq , qtncreatetime) values('电科导航', '电科导航', 'dkdh7', 'dkdh7', 1, TIMESTAMP '2004-10-19 10:23:54');");
 	db.BeginTransaction();
 	db.Exec("drop table data");

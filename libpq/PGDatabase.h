@@ -27,7 +27,7 @@ struct pgdb_monitor_result{
 	char opvalues[MAXOPVALUELEN]; 
 };
 
-typedef void (*pgdb_monitor_callback)(struct pgdb_monitor_result *);
+typedef void (*pgdb_monitor_callback)(struct pgdb_monitor_result *, void*);
 
 class PGDatabase{
 public:
@@ -64,7 +64,7 @@ public:
 	bool RemoveListener(const char* strTablename);
 
 	// brief 得到修改的数据
-	void GetNotify(pgdb_monitor_callback pmc);
+	void GetNotify(pgdb_monitor_callback pmc, void*);
 	
 private:
 	PGconn* m_pConnect;

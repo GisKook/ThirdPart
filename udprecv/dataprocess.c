@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <assert.h>
 #include <zmq.h>
+#include <sys/time.h>
 #include <time.h>
 #include "list.h"
 #include "dataprocess.h"
@@ -91,7 +92,11 @@ void* forwardmsg(void* rd){
 	for(;;){
 		memset(buf, 0, MAXBUFLEN);
 		len = read(fd, buf, 1);
-		
+		if(len < 0){
+			close(fd);
+			fprintf(stderr, "error: %s fd error. %s %s %d \n", strerror(errno),__FILE__, __FUNCTION__, __LINE__); 
+		}
+
 		list_for_each_safe(pos, n, head){
 			temp = list_entry(pos, struct packet, list); 
 			if(temp->forward !=1){ 
@@ -185,18 +190,18 @@ void* forwardmsg(void* rd){
 				}    
 				assert(temp->fmtinfo.retrydataentrycount == 0);
 			}
-//			if(temp->saved == 1 && temp->forward == 1){ 
-//				if(temp->data != NULL){ 
-//					free(temp->data);
-//					temp->data = NULL;
-//				}
-//				clearbeidouinfo(&temp->fmtinfo);
-//				list_del(&temp->list);
-//				if(temp != NULL){
-//					free(temp);
-//					temp = NULL;
-//				}
-//			}
+			//			if(temp->saved == 1 && temp->forward == 1){ 
+			//				if(temp->data != NULL){ 
+			//					free(temp->data);
+			//					temp->data = NULL;
+			//				}
+			//				clearbeidouinfo(&temp->fmtinfo);
+			//				list_del(&temp->list);
+			//				if(temp != NULL){
+			//					free(temp);
+			//					temp = NULL;
+			//				}
+			//			}
 		}
 		if(buf[0] == 'E'){
 			fprintf(stdout, "     forward beidou data thread exit successfully.\n");
@@ -206,6 +211,30 @@ void* forwardmsg(void* rd){
 	}
 }
 
+int savemsg_reconnectdatabase(PGDatabase * db,int year){
+
+	db->DisConnect();
+	const char* dbhost = CNConfig::GetInstance().GetValue(DBHOST);
+	const char* dbport = CNConfig::GetInstance().GetValue(DBPORT);
+	const char* dbname = CNConfig::GetInstance().GetValue(DBNAME);
+	const char* dbuser = CNConfig::GetInstance().GetValue(DBUSER);
+	const char* dbpwd = CNConfig::GetInstance().GetValue(DBPWD);
+	PGConnInfo conn;
+	conn.pghost = (char*)dbhost;
+	conn.pgport = (char*)dbport;
+	conn.dbName = (char*)dbname;
+	char szyear[4] = {0};
+	sprintf(szyear, "%d", year);
+	memcpy(conn.dbName+strlen(conn.dbName)-4,szyear,4);
+	conn.login = (char*)dbuser;
+	conn.passwd = (char*)dbpwd; 
+	if( 0 != db->Connect(conn)){
+		fprintf(stderr, "connect to database error. host:%s port:%s dbname:%s login:%s passwd:%s \n", conn.pghost, conn.pgport, conn.dbName, conn.login, conn.passwd);
+		return -1;
+	}
+
+	return 0;
+}
 #define MAXSQLLEN 512
 #define MAXBYTELEN 256
 #define MAXSAVEBUFLEN 1024
@@ -231,6 +260,17 @@ void* savemsg(void* rd){
 	int recordtime = 0;
 	time_t endtime = 0;
 	int begintransaction = 0;
+	struct timeval timeval; 
+	memset(&timeval, 0, sizeof(struct timeval));
+	int rc = 0;
+	rc = gettimeofday(&timeval, NULL);
+	assert(rc == 0);
+	struct tm tm;
+	struct tm tmcur;
+	memset(&tm, 0, sizeof(struct tm));
+	gmtime_r(&timeval.tv_sec,&tm);
+	memset(&tmcur, 0, sizeof(struct tm));
+
 	for(;;){ 
 		memset(buf, 0, MAXSAVEBUFLEN);
 		len = read(fd, buf, MAXSAVEBUFLEN);
@@ -254,7 +294,16 @@ void* savemsg(void* rd){
 					}
 				}
 				memset(sqlbuf,0,MAXSQLLEN);
-				sprintf(sqlbuf, "insert into brs_udp_data(recv_time,recv_index,recv_data) VALUES(now(),%d,E\'\\\\x%s')",index,bytebuf);
+				rc = gettimeofday(&timeval, NULL);
+				gmtime_r(&timeval.tv_sec, &tmcur);
+				if(tmcur.tm_year == (tm.tm_year+1)){ 
+					tm.tm_year++;
+					savemsg_reconnectdatabase(&p->db, tmcur.tm_year);
+				}else if(tmcur.tm_year != tm.tm_year){
+					fprintf(stderr,"get time error. %s %s %d\n", __FILE__, __FUNCTION__, __LINE__);
+				}
+
+				sprintf(sqlbuf, "insert into brs_udp_data(recv_time,recv_index,recv_data%d) VALUES(now(),%d,E\'\\\\x%s')",tmcur.tm_mon,index,bytebuf);
 				if(!p->db.Exec(sqlbuf)){
 					fprintf(stderr, "%s insert error! \n",sqlbuf);
 				}
@@ -264,13 +313,13 @@ void* savemsg(void* rd){
 					if( tempdata->messagecategory == 0){
 						int longititude = getmilliondegree(tempdata->message.posinfo->longitudedegree, tempdata->message.posinfo->longitudeminute, tempdata->message.posinfo->longitudesecond, tempdata->message.posinfo->longitudetenths);
 						int latitude = getmilliondegree(tempdata->message.posinfo->latitudedegree, tempdata->message.posinfo->latitudeminute, tempdata->message.posinfo->latitudesecond, tempdata->message.posinfo->latitudetenths);
-						sprintf(sqlbuf, "insert into brs_dwxx(card, recv_time, pos_long, pos_lat, height, heightex, encrypt, accuracy, urgent, multi, time_hour, time_minute, time_second, time_centi) values(%d,now(),%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d)" ,tempdata->message.posinfo->userid,longititude, latitude, tempdata->message.posinfo->geodeticheight, tempdata->message.posinfo->detlaelevation, tempdata->message.posinfo->encryption, tempdata->message.posinfo->accuracy, tempdata->message.posinfo->emergencypostion ,tempdata->message.posinfo->multivaluesolution, tempdata->message.posinfo->applytime.hour, tempdata->message.posinfo->applytime.minutes, tempdata->message.posinfo->applytime.seconds, tempdata->message.posinfo->applytime.tenms); 
+						sprintf(sqlbuf, "insert into brs_dwxx%d(card, recv_time, pos_long, pos_lat, height, heightex, encrypt, accuracy, urgent, multi, time_hour, time_minute, time_second, time_centi) values(%d,now(),%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d)" ,tmcur.tm_mon, tempdata->message.posinfo->userid,longititude, latitude, tempdata->message.posinfo->geodeticheight, tempdata->message.posinfo->detlaelevation, tempdata->message.posinfo->encryption, tempdata->message.posinfo->accuracy, tempdata->message.posinfo->emergencypostion ,tempdata->message.posinfo->multivaluesolution, tempdata->message.posinfo->applytime.hour, tempdata->message.posinfo->applytime.minutes, tempdata->message.posinfo->applytime.seconds, tempdata->message.posinfo->applytime.tenms); 
 					}else if(tempdata->messagecategory == 3){ 
 						memset(bytebuf, 0 , MAXBYTELEN);
 						hex2char(bytebuf, tempdata->message.cominfo->messagebuffer, tempdata->message.cominfo->messagebytelength);
-						sprintf(sqlbuf, "insert into brs_txxx(recv_time, sender, recver, time_hour, time_minute, time_second, msg_form, msg_type, msg_encrypt, msg_len, msg) values(now(), %d, %d, %d, %d, %d, %d, %d, %d, %d, E\'\\\\x%s')",tempdata->message.cominfo->sendaddr, tempdata->message.cominfo->recvaddr, tempdata->message.cominfo->sendtime.hour, tempdata->message.cominfo->sendtime.minutes, tempdata->message.cominfo->sendtime.seconds, tempdata->message.cominfo->messageform, tempdata->message.cominfo->messagecategory, tempdata->message.cominfo->encryption, tempdata->message.cominfo->messagelength, bytebuf); 
+						sprintf(sqlbuf, "insert into brs_txxx%d(recv_time, sender, recver, time_hour, time_minute, time_second, msg_form, msg_type, msg_encrypt, msg_len, msg) values(now(), %d, %d, %d, %d, %d, %d, %d, %d, %d, E\'\\\\x%s')",tmcur.tm_mon, tempdata->message.cominfo->sendaddr, tempdata->message.cominfo->recvaddr, tempdata->message.cominfo->sendtime.hour, tempdata->message.cominfo->sendtime.minutes, tempdata->message.cominfo->sendtime.seconds, tempdata->message.cominfo->messageform, tempdata->message.cominfo->messagecategory, tempdata->message.cominfo->encryption, tempdata->message.cominfo->messagelength, bytebuf); 
 					}else if(tempdata->messagecategory == 4){
-						sprintf(sqlbuf, "insert into brs_txhz(recv_time, sender, recver, time_hour, time_minute, time_second) values(now(), %d, %d, %d, %d, %d)", tempdata->message.rcptinfo->sendaddr, tempdata->message.rcptinfo->recvaddr, tempdata->message.rcptinfo->receipttime.hour, tempdata->message.rcptinfo->receipttime.minutes, tempdata->message.rcptinfo->receipttime.seconds);
+						sprintf(sqlbuf, "insert into brs_txhz%d(recv_time, sender, recver, time_hour, time_minute, time_second) values(now(), %d, %d, %d, %d, %d)", tmcur.tm_mon,tempdata->message.rcptinfo->sendaddr, tempdata->message.rcptinfo->recvaddr, tempdata->message.rcptinfo->receipttime.hour, tempdata->message.rcptinfo->receipttime.minutes, tempdata->message.rcptinfo->receipttime.seconds);
 					}else{
 						fprintf(stderr, "no such protocol %d\n", tempdata->messagecategory);
 					}
@@ -295,18 +344,18 @@ void* savemsg(void* rd){
 				}
 
 			}
-						if(temp->forward == 1 && temp->saved == 1){ 
-							if(temp->data != NULL){
-								free(temp->data);
-								temp->data = NULL;
-							}
-							clearbeidouinfo(&temp->fmtinfo);
-							list_del(&temp->list);
-							if(temp != NULL){
-								free(temp);
-								temp = NULL;
-							}
-						}
+			if(temp->forward == 1 && temp->saved == 1){ 
+				if(temp->data != NULL){
+					free(temp->data);
+					temp->data = NULL;
+				}
+				clearbeidouinfo(&temp->fmtinfo);
+				list_del(&temp->list);
+				if(temp != NULL){
+					free(temp);
+					temp = NULL;
+				}
+			}
 		}
 		if(buf[len - 1] == 'E'){
 			p->db.DisConnect(); 
@@ -343,6 +392,10 @@ void* parsemsg(void* rd){
 	for(;;){ 
 		memset(buf, 0, MAXBUFLEN);
 		len = read(fd, buf, 1);
+		if(len < 0){ 
+			fprintf(stderr, "error: %s fd error, %s %s %d\n", strerror(errno), __FILE__, __FUNCTION__, __LINE__);
+			close(fd);
+		}
 		if(buf[0] == 'E'){
 			fprintf(stdout, "data process module prepare to exit...\n");
 
@@ -375,7 +428,7 @@ void* parsemsg(void* rd){
 				++save_sendtimes;
 			}
 		}
-		
+
 		write(fmfd[1],"1",1);
 
 	}
@@ -411,6 +464,7 @@ pthread_t dataprocess_init(int fd){
 	conn.passwd = (char*)dbpwd; 
 	p = (struct param*)malloc(sizeof(struct param));
 	if( 0 != p->db.Connect(conn)){
+		fprintf(stderr, "connect to database error. host:%s port:%s dbname:%s login:%s passwd:%s \n", conn.pghost, conn.pgport, conn.dbName, conn.login, conn.passwd);
 		return -1;
 	}
 

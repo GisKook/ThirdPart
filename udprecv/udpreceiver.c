@@ -91,6 +91,10 @@ void udprecv_epoll(int efd, udprecv_message* msg){
 				memset(buf, 0, MAXBUFLEN);
 				errno = 0;
 				len = read(ev1[i].data.fd,buf,MAXBUFLEN);
+				if(len < 0){
+					close(ev1[i].data.fd);
+					fprintf(stderr, "error: %s %s %s %d\n", strerror(errno), __FILE__, __FUNCTION__, __LINE__);
+				}
 		//		printf("recv %s\n", buf);
 				memcpy(msg->buf, buf, MAXBUFLEN);
 				if(errno != 0){

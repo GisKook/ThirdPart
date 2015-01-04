@@ -303,7 +303,7 @@ void* savemsg(void* rd){
 					fprintf(stderr,"get time error. %s %s %d\n", __FILE__, __FUNCTION__, __LINE__);
 				}
 
-				sprintf(sqlbuf, "insert into brs_udp_data(recv_time,recv_index,recv_data%d) VALUES(now(),%d,E\'\\\\x%s')",tmcur.tm_mon,index,bytebuf);
+				sprintf(sqlbuf, "insert into brs_udp_data%02d(recv_time,recv_index,recv_data) VALUES(now(),%d,E\'\\\\x%s')",tmcur.tm_mon,index,bytebuf);
 				if(!p->db.Exec(sqlbuf)){
 					fprintf(stderr, "%s insert error! \n",sqlbuf);
 				}
@@ -313,13 +313,13 @@ void* savemsg(void* rd){
 					if( tempdata->messagecategory == 0){
 						int longititude = getmilliondegree(tempdata->message.posinfo->longitudedegree, tempdata->message.posinfo->longitudeminute, tempdata->message.posinfo->longitudesecond, tempdata->message.posinfo->longitudetenths);
 						int latitude = getmilliondegree(tempdata->message.posinfo->latitudedegree, tempdata->message.posinfo->latitudeminute, tempdata->message.posinfo->latitudesecond, tempdata->message.posinfo->latitudetenths);
-						sprintf(sqlbuf, "insert into brs_dwxx%d(card, recv_time, pos_long, pos_lat, height, heightex, encrypt, accuracy, urgent, multi, time_hour, time_minute, time_second, time_centi) values(%d,now(),%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d)" ,tmcur.tm_mon, tempdata->message.posinfo->userid,longititude, latitude, tempdata->message.posinfo->geodeticheight, tempdata->message.posinfo->detlaelevation, tempdata->message.posinfo->encryption, tempdata->message.posinfo->accuracy, tempdata->message.posinfo->emergencypostion ,tempdata->message.posinfo->multivaluesolution, tempdata->message.posinfo->applytime.hour, tempdata->message.posinfo->applytime.minutes, tempdata->message.posinfo->applytime.seconds, tempdata->message.posinfo->applytime.tenms); 
+						sprintf(sqlbuf, "insert into brs_dwxx%02d(card, recv_time, pos_long, pos_lat, height, heightex, encrypt, accuracy, urgent, multi, time_hour, time_minute, time_second, time_centi) values(%d,now(),%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d)" ,tmcur.tm_mon, tempdata->message.posinfo->userid,longititude, latitude, tempdata->message.posinfo->geodeticheight, tempdata->message.posinfo->detlaelevation, tempdata->message.posinfo->encryption, tempdata->message.posinfo->accuracy, tempdata->message.posinfo->emergencypostion ,tempdata->message.posinfo->multivaluesolution, tempdata->message.posinfo->applytime.hour, tempdata->message.posinfo->applytime.minutes, tempdata->message.posinfo->applytime.seconds, tempdata->message.posinfo->applytime.tenms); 
 					}else if(tempdata->messagecategory == 3){ 
 						memset(bytebuf, 0 , MAXBYTELEN);
 						hex2char(bytebuf, tempdata->message.cominfo->messagebuffer, tempdata->message.cominfo->messagebytelength);
-						sprintf(sqlbuf, "insert into brs_txxx%d(recv_time, sender, recver, time_hour, time_minute, time_second, msg_form, msg_type, msg_encrypt, msg_len, msg) values(now(), %d, %d, %d, %d, %d, %d, %d, %d, %d, E\'\\\\x%s')",tmcur.tm_mon, tempdata->message.cominfo->sendaddr, tempdata->message.cominfo->recvaddr, tempdata->message.cominfo->sendtime.hour, tempdata->message.cominfo->sendtime.minutes, tempdata->message.cominfo->sendtime.seconds, tempdata->message.cominfo->messageform, tempdata->message.cominfo->messagecategory, tempdata->message.cominfo->encryption, tempdata->message.cominfo->messagelength, bytebuf); 
+						sprintf(sqlbuf, "insert into brs_txxx%02d(recv_time, sender, recver, time_hour, time_minute, time_second, msg_form, msg_type, msg_encrypt, msg_len, msg) values(now(), %d, %d, %d, %d, %d, %d, %d, %d, %d, E\'\\\\x%s')",tmcur.tm_mon, tempdata->message.cominfo->sendaddr, tempdata->message.cominfo->recvaddr, tempdata->message.cominfo->sendtime.hour, tempdata->message.cominfo->sendtime.minutes, tempdata->message.cominfo->sendtime.seconds, tempdata->message.cominfo->messageform, tempdata->message.cominfo->messagecategory, tempdata->message.cominfo->encryption, tempdata->message.cominfo->messagelength, bytebuf); 
 					}else if(tempdata->messagecategory == 4){
-						sprintf(sqlbuf, "insert into brs_txhz%d(recv_time, sender, recver, time_hour, time_minute, time_second) values(now(), %d, %d, %d, %d, %d)", tmcur.tm_mon,tempdata->message.rcptinfo->sendaddr, tempdata->message.rcptinfo->recvaddr, tempdata->message.rcptinfo->receipttime.hour, tempdata->message.rcptinfo->receipttime.minutes, tempdata->message.rcptinfo->receipttime.seconds);
+						sprintf(sqlbuf, "insert into brs_txhz%02d(recv_time, sender, recver, time_hour, time_minute, time_second) values(now(), %d, %d, %d, %d, %d)", tmcur.tm_mon,tempdata->message.rcptinfo->sendaddr, tempdata->message.rcptinfo->recvaddr, tempdata->message.rcptinfo->receipttime.hour, tempdata->message.rcptinfo->receipttime.minutes, tempdata->message.rcptinfo->receipttime.seconds);
 					}else{
 						fprintf(stderr, "no such protocol %d\n", tempdata->messagecategory);
 					}

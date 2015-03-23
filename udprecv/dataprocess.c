@@ -416,6 +416,7 @@ void* parsemsg(void* rd){
 		list_for_each_safe(pos, n,head){
 			if(list_entry(pos, struct packet, list)->parsed == 0){
 				if( resolvebeidouinfo(&(list_entry(pos, struct packet, list)->fmtinfo),list_entry(pos,struct packet, list)->data) == -1){
+					list_entry(pos, struct packet,list)->parsed = 2;	
 					fprintf(stderr, "parse error: %s %d \n", __FILE__, __LINE__);
 				}else{
 					list_entry(pos, struct packet,list)->parsed = 1;	

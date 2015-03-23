@@ -344,7 +344,7 @@ void* savemsg(void* rd){
 				}
 
 			}
-			if(temp->forward == 1 && temp->saved == 1){ 
+			if((temp->forward == 1 && temp->saved == 1) || temp->parsed == 2){ 
 				if(temp->data != NULL){
 					free(temp->data);
 					temp->data = NULL;
